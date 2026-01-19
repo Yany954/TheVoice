@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct TheVoiceApp: App {
+    @StateObject private var audioManager = AudioManager()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            LoginView()
+                .environmentObject(audioManager)
         }
     }
 }

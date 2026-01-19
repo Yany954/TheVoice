@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		59E82AA12F1DE781003663D9 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA02F1DE781003663D9 /* FirebaseAuth */; };
+		59E82AA32F1DE781003663D9 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA22F1DE781003663D9 /* FirebaseCore */; };
+		59E82AA52F1DE781003663D9 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA42F1DE781003663D9 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		59E82A532F1DAABF003663D9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +35,38 @@
 		59E82A5C2F1DAABF003663D9 /* TheVoiceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheVoiceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		59E82A772F1DAD53003663D9 /* Exceptions for "TheVoice" folder in "TheVoiceTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/AudioManager.swift,
+			);
+			target = 59E82A512F1DAABF003663D9 /* TheVoiceTests */;
+		};
+		59E82A782F1DAD53003663D9 /* Exceptions for "TheVoice" folder in "TheVoiceUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/AudioManager.swift,
+			);
+			target = 59E82A5B2F1DAABF003663D9 /* TheVoiceUITests */;
+		};
+		59E82A982F1DDD36003663D9 /* Exceptions for "TheVoice" folder in "TheVoice" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 59E82A402F1DAABD003663D9 /* TheVoice */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		59E82A432F1DAABD003663D9 /* TheVoice */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				59E82A982F1DDD36003663D9 /* Exceptions for "TheVoice" folder in "TheVoice" target */,
+				59E82A772F1DAD53003663D9 /* Exceptions for "TheVoice" folder in "TheVoiceTests" target */,
+				59E82A782F1DAD53003663D9 /* Exceptions for "TheVoice" folder in "TheVoiceUITests" target */,
+			);
 			path = TheVoice;
 			sourceTree = "<group>";
 		};
@@ -45,6 +80,11 @@
 			path = TheVoiceUITests;
 			sourceTree = "<group>";
 		};
+		59E82A9C2F1DDEA3003663D9 /* Localization */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Localization;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +92,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				59E82AA32F1DE781003663D9 /* FirebaseCore in Frameworks */,
+				59E82AA12F1DE781003663D9 /* FirebaseAuth in Frameworks */,
+				59E82AA52F1DE781003663D9 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +118,7 @@
 		59E82A382F1DAABC003663D9 = {
 			isa = PBXGroup;
 			children = (
+				59E82A9C2F1DDEA3003663D9 /* Localization */,
 				59E82A432F1DAABD003663D9 /* TheVoice */,
 				59E82A552F1DAABF003663D9 /* TheVoiceTests */,
 				59E82A5F2F1DAABF003663D9 /* TheVoiceUITests */,
@@ -109,9 +153,13 @@
 			);
 			fileSystemSynchronizedGroups = (
 				59E82A432F1DAABD003663D9 /* TheVoice */,
+				59E82A9C2F1DDEA3003663D9 /* Localization */,
 			);
 			name = TheVoice;
 			packageProductDependencies = (
+				59E82AA02F1DE781003663D9 /* FirebaseAuth */,
+				59E82AA22F1DE781003663D9 /* FirebaseCore */,
+				59E82AA42F1DE781003663D9 /* FirebaseFirestore */,
 			);
 			productName = TheVoice;
 			productReference = 59E82A412F1DAABD003663D9 /* TheVoice.app */;
@@ -195,6 +243,9 @@
 			);
 			mainGroup = 59E82A382F1DAABC003663D9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 59E82A422F1DAABD003663D9 /* Products */;
 			projectDirPath = "";
@@ -396,6 +447,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TheVoice/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Buscamos altavoces Bluetooth para conectar el micrófono";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Necesitamos Bluetooth para conectar con altavoces externos";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Necesitamos acceso al micrófono para transmitir tu voz al altavoz Bluetooth";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -414,10 +469,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = XYY65JQBM6.TheVoice;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 2.2;
 			};
 			name = Debug;
@@ -435,6 +491,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TheVoice/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Buscamos altavoces Bluetooth para conectar el micrófono";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Necesitamos Bluetooth para conectar con altavoces externos";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Necesitamos acceso al micrófono para transmitir tu voz al altavoz Bluetooth";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -453,10 +513,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = XYY65JQBM6.TheVoice;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 2.2;
 			};
 			name = Release;
@@ -591,6 +652,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		59E82AA02F1DE781003663D9 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		59E82AA22F1DE781003663D9 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		59E82AA42F1DE781003663D9 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 59E82A392F1DAABD003663D9 /* Project object */;
 }

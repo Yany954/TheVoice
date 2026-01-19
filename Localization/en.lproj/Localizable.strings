@@ -1,0 +1,36 @@
+/* 
+  Localizable.strings
+  TheVoice
+
+  Created by Yany Gonzalez Yepez on 1/18/26.
+  
+*/
+// Localizable.strings (English)
+
+// Login Screen
+"welcome" = "Welcome";
+"welcome_subtitle" = "Create an account or log in to use the app";
+"login_tab" = "Log In";
+"register_tab" = "Register";
+"continue_google" = "Continue with Google";
+"continue_facebook" = "Continue with Facebook";
+
+// Register Screen
+"register_title" = "Create Account";
+"email_placeholder" = "Email";
+"password_placeholder" = "Password";
+"confirm_password_placeholder" = "Confirm Password";
+"register_button" = "Register";
+"already_have_account" = "Already have an account?";
+
+// Main Screen
+"bluetooth_connected" = "Bluetooth connected";
+"bluetooth_disconnected" = "Bluetooth disconnected";
+"activate_microphone" = "Activate Microphone";
+"stop_microphone" = "Stop";
+
+// Alerts
+"bluetooth_required" = "Bluetooth Required";
+"bluetooth_message" = "Please connect a Bluetooth speaker to use the microphone.";
+"error_starting_mic" = "Error starting microphone";
+"ok" = "OK";
