@@ -29,6 +29,18 @@
 "activate_microphone" = "Activate Microphone";
 "stop_microphone" = "Stop";
 
+// Profile Screen
+"profile" = "Profile";
+"sign_out" = "Sign Out";
+"delete_account" = "Delete Account";
+"sign_out_confirmation" = "Are you sure you want to sign out?";
+"delete_confirmation" = "This action is permanent and cannot be undone. All your data will be deleted.";
+"cancel" = "Cancel";
+
+// Voice Effects
+"voice_effects" = "Voice Effects";
+"current_effect" = "Current Effect";
+
 // Alerts
 "bluetooth_required" = "Bluetooth Required";
 "bluetooth_message" = "Please connect a Bluetooth speaker to use the microphone.";

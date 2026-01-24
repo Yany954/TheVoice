@@ -1,123 +1,204 @@
-//
-//  AudioManager.swift
-//  TheVoice
-//
-//  Created by Yany Gonzalez Yepez on 1/18/26.
-//
-
+import Foundation
 import AVFoundation
-import Combine
+import UIKit
 
-class AudioManager: ObservableObject{
-    private var engine = AVAudioEngine()
-    private var audioSession = AVAudioSession.sharedInstance()
-    
-    @Published var isBluetoothConnected: Bool = false
-    @Published var isTransmitting: Bool = false
+final class AudioManager: ObservableObject {
+
+    // MARK: - UI State
+
+    @Published private(set) var isTransmitting = false
+    @Published private(set) var isBluetoothConnected = false
+    @Published private(set) var isInterrupted = false
+    @Published private(set) var micLevel: Float = 0.0
+
+    @Published var currentEffect: VoiceEffect = .none
     @Published var errorMessage: String?
-    
-    init(){
-        setupAudioSession()
-        checkBluetoothStatus()
-        setupNotifications()
-    }
-    
-    //MARK - Configuracion de audioSession
-    private func setupAudioSession(){
-        do{
-            try audioSession.setCategory(
-                .playAndRecord,
-                mode: .default,
-                options: [.allowBluetooth, .defaultToSpeaker]
-            )
-            try audioSession.setActive(true)
-        } catch {
-            print("Error configurando audio session: \(error)")
-        }
-    }
-    
-    //MARK - Notificaciones de cambio de ruta
-    private func setupNotifications(){
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleRouteChange),
-            name: AVAudioSession.routeChangeNotification,
-            object: nil)
-    }
-    @objc private func handleRouteChange (notification: Notification){
+
+    // MARK: - Audio Core
+
+    private let audioSession = AVAudioSession.sharedInstance()
+    private let engine = AVAudioEngine()
+    private var inputNode: AVAudioInputNode?
+
+    // MARK: - Init
+
+    init() {
+        configureNotifications()
         checkBluetoothStatus()
     }
-    
-    //MARK - Verificar estado de Bluetooth
-    func checkBluetoothStatus(){
-        let currentRoute = audioSession.currentRoute
-        
-        //Verificar si hay salida Bluetooth activa
-        let hasBluetoothOutput = currentRoute.outputs.contains{ output in
-            output.portType == .bluetoothA2DP ||
-            output.portType == .bluetoothHFP ||
-            output.portType == .bluetoothLE
-        }
-        DispatchQueue.main.async{
-            self.isBluetoothConnected = hasBluetoothOutput
-            
-            //Si se desconecta Bluetooth, detener transmision
-            if !hasBluetoothOutput && self.isTransmitting{
-                self.stopMicrophone()
-                self.errorMessage = "Bluetooth desconectado. Transmisión detenida."
-            }
-        }
+
+    deinit {
+        stopMicrophone()
+        NotificationCenter.default.removeObserver(self)
     }
-    
-    //MARK - Iniciar microfono
-    func startMicrophone(){
-        //Solo funciona si el Bluetooth conectado
-        guard isBluetoothConnected else {
-            errorMessage = "No hay altavoz Bluetooth conectado. Conecta uno para continuar."
-            return
-        }
+
+    // MARK: - Public API
+
+    func startMicrophone() {
         guard !isTransmitting else { return }
-        
-        let inputNode = engine.inputNode
-        let outputNode = engine.mainMixerNode
-        let inputFormat = inputNode.inputFormat(forBus: 0)
-        
-        // Conectar entrada de micrófono directamente a la salida
-        engine.connect(inputNode, to: outputNode, format: inputFormat)
-                
-        // Agregar tap para monitorear (opcional)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { buffer, time in
-        // Aquí podrías agregar efectos, procesamiento, etc.
-    }
+        guard !isInterrupted else { return }
+
         do {
-            try engine.start()
-            DispatchQueue.main.async {
-                self.isTransmitting = true
-                self.errorMessage = nil
-            }
-        }catch{
-                DispatchQueue.main.async{
-                    self.errorMessage = "Error al iniciar el micrófono: \(error.localizedDescription)"
-                }
-            }
-        }
-    // MARK: - Detener Micrófono
-        func stopMicrophone() {
-            guard isTransmitting else { return }
-            
-            engine.inputNode.removeTap(onBus: 0)
-            engine.stop()
-            engine.reset()
-            
-            DispatchQueue.main.async {
-                self.isTransmitting = false
-            }
-        }
-        
-        // MARK: - Cleanup
-        deinit {
-            NotificationCenter.default.removeObserver(self)
+            try configureSession()
+            try startEngine()
+            installMeterTap()
+
+            isTransmitting = true
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
             stopMicrophone()
         }
-    
+    }
+
+    func stopMicrophone() {
+        removeMeterTap()
+        engine.stop()
+        engine.reset()
+
+        isTransmitting = false
+        micLevel = 0
+    }
+
+    func applyEffect(_ effect: VoiceEffect) {
+        currentEffect = effect
+        // Effects must be applied ONLY when engine is stopped
+    }
+
+    func checkBluetoothStatus() {
+        isBluetoothConnected = audioSession.currentRoute.outputs.contains {
+            $0.portType == .bluetoothA2DP ||
+            $0.portType == .bluetoothLE ||
+            $0.portType == .bluetoothHFP
+        }
+    }
+
+    // MARK: - Audio Setup
+
+    private func configureSession() throws {
+        try audioSession.setCategory(
+            .playAndRecord,
+            mode: .voiceChat,
+            options: [.allowBluetooth, .defaultToSpeaker]
+        )
+        try audioSession.setActive(true)
+    }
+
+    private func startEngine() throws {
+        engine.stop()
+        engine.reset()
+
+        inputNode = engine.inputNode
+        guard let inputNode else {
+            throw NSError(domain: "Audio", code: -1)
+        }
+
+        let format = inputNode.outputFormat(forBus: 0)
+
+        engine.connect(inputNode, to: engine.mainMixerNode, format: format)
+
+        try engine.start()
+    }
+
+    // MARK: - Mic Level Meter (CORRECT)
+
+    private func installMeterTap() {
+        guard let inputNode else { return }
+
+        let bus = 0
+        let format = inputNode.outputFormat(forBus: bus)
+
+        inputNode.removeTap(onBus: bus)
+
+        inputNode.installTap(
+            onBus: bus,
+            bufferSize: 1024,
+            format: format
+        ) { [weak self] buffer, _ in
+            guard let self else { return }
+
+            let channelData = buffer.floatChannelData?[0]
+            let frameLength = Int(buffer.frameLength)
+
+            guard let channelData else { return }
+
+            var rms: Float = 0
+
+            for i in 0..<frameLength {
+                rms += channelData[i] * channelData[i]
+            }
+
+            rms = sqrt(rms / Float(frameLength))
+
+            DispatchQueue.main.async {
+                self.micLevel = min(max(rms * 20, 0), 1)
+            }
+        }
+    }
+
+    private func removeMeterTap() {
+        inputNode?.removeTap(onBus: 0)
+    }
+
+    // MARK: - Notifications
+
+    private func configureNotifications() {
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(routeChanged),
+            name: AVAudioSession.routeChangeNotification,
+            object: nil
+        )
+    }
+
+    // MARK: - Handlers
+
+    @objc private func handleInterruption(_ notification: Notification) {
+        guard
+            let info = notification.userInfo,
+            let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+            let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+        else { return }
+
+        if type == .began {
+            isInterrupted = true
+            stopMicrophone()
+        } else {
+            isInterrupted = false
+        }
+    }
+
+    @objc private func appDidEnterBackground() {
+        stopMicrophone()
+    }
+
+    @objc private func appWillEnterForeground() {
+        checkBluetoothStatus()
+    }
+
+    @objc private func routeChanged() {
+        checkBluetoothStatus()
+    }
 }

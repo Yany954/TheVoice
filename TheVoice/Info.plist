@@ -7,5 +7,18 @@
 		<string>en</string>
 		<string></string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>GoogleSignIn</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.824754632863-pqa4vp5u94v65rdrshmtp7q6m5b8dipg</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

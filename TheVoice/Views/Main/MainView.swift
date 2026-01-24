@@ -1,161 +1,268 @@
-//
-//  MainView.swift
-//  TheVoice
-//
-//  Created by Yany Gonzalez Yepez on 1/18/26.
-//
 import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var audioManager: AudioManager
+    @EnvironmentObject var authManager: AuthManager
     @State private var showAlert = false
+    @State private var showProfile = false
+    @State private var showEffects = false
     
     var body: some View {
-        ZStack {
-            // Fondo degradado similar al mockup
-            LinearGradient(
-                colors: [
-                    Color(red: 0.15, green: 0.1, blue: 0.3),
-                    Color(red: 0.25, green: 0.2, blue: 0.4)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 40) {
-                // Header
-                HStack {
-                    Button(action: {
-                        // Acción para regresar
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                    
-                    Spacer()
-                    
-                    Text("The voice")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        // Botón de configuración
-                    }) {
-                        Image(systemName: "arrow.up.circle")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                    }
-                }
-                .padding(.horizontal, 30)
-                .padding(.top, 50)
+        NavigationStack {
+            ZStack {
+                // Degradado mejorado: morado arriba → negro abajo
+                LinearGradient(
+                    colors: [
+                        Color(hex: "271C67"),  // Morado oscuro arriba
+                        Color(hex: "1a1544"),  // Morado medio
+                        Color(hex: "020209")   // Negro abajo
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
                 
-                Spacer()
-                
-                // Micrófono central
-                VStack(spacing: 30) {
-                    ZStack {
-                        // Círculo animado cuando está transmitiendo
-                        if audioManager.isTransmitting {
-                            Circle()
-                                .stroke(Color.green.opacity(0.3), lineWidth: 3)
-                                .frame(width: 280, height: 280)
-                                .scaleEffect(audioManager.isTransmitting ? 1.1 : 1.0)
-                                .animation(
-                                    Animation.easeInOut(duration: 1.0)
-                                        .repeatForever(autoreverses: true),
-                                    value: audioManager.isTransmitting
-                                )
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        // Botón de efectos de voz (reemplaza el botón de atrás)
+                        Button(action: {
+                            showEffects = true
+                        }) {
+                            Image(systemName: "waveform.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 44, height: 44)
+                                .background(Color.white.opacity(0.15))
+                                .clipShape(Circle())
                         }
                         
-                        // Imagen del micrófono
-                        Image("logo") // O usa una imagen de micrófono
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 200, height: 200)
-                            .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-                    }
-                    
-                    // Estado del Bluetooth
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(audioManager.isBluetoothConnected ? Color.green : Color.red)
-                            .frame(width: 12, height: 12)
+                        Spacer()
                         
-                        Text(audioManager.isBluetoothConnected ? "Bluetooth conectado" : "Bluetooth desconectado")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(20)
-                    
-                    // Botón de activar/desactivar micrófono
-                    Button(action: {
-                        if audioManager.isTransmitting {
-                            audioManager.stopMicrophone()
-                        } else {
-                            if audioManager.isBluetoothConnected {
-                                audioManager.startMicrophone()
-                            } else {
-                                showAlert = true
+                        Text("The voice")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+                        // Botón de perfil (reemplaza el menú)
+                        Button(action: {
+                            showProfile = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.purple.opacity(0.6),
+                                                Color.blue.opacity(0.6)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 44, height: 44)
+                                
+                                if let firstLetter = authManager.user?.displayName?.first ?? authManager.user?.email?.first {
+                                    Text(String(firstLetter).uppercased())
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(.white)
+                                } else {
+                                    Image(systemName: "person.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.white)
+                                }
                             }
                         }
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: audioManager.isTransmitting ? "mic.slash.fill" : "mic.fill")
-                                .font(.system(size: 20))
-                            
-                            Text(audioManager.isTransmitting ? "Detener" : "Activar Micrófono")
-                                .font(.system(size: 17, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .frame(width: 250, height: 56)
-                        .background(
-                            audioManager.isTransmitting
-                                ? Color.red
-                                : (audioManager.isBluetoothConnected ? Color.green : Color.gray)
-                        )
-                        .cornerRadius(28)
-                        .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
                     }
-                    .disabled(!audioManager.isBluetoothConnected && !audioManager.isTransmitting)
-                }
-                
-                Spacer()
-                
-                // Mensaje de error si existe
-                if let errorMessage = audioManager.errorMessage {
-                    Text(errorMessage)
-                        .font(.system(size: 14))
-                        .foregroundColor(.red.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 30)
-                        .padding(.bottom, 20)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 50)
+                    .padding(.bottom, 20)
+                    
+                    Spacer()
+                    
+                    // Micrófono central con switch (MÁS GRANDE)
+                    VStack(spacing: 20) {
+                        ZStack {
+                            // Glow effect cuando está activo
+                            if audioManager.isTransmitting {
+                                Circle()
+                                    .fill(
+                                        RadialGradient(
+                                            colors: [
+                                                Color.green.opacity(0.5),
+                                                Color.green.opacity(0.3),
+                                                Color.green.opacity(0.1),
+                                                Color.clear
+                                            ],
+                                            center: .center,
+                                            startRadius: 80,
+                                            endRadius: 200
+                                        )
+                                    )
+                                    .frame(width: 400, height: 400)
+                                    .scaleEffect(audioManager.isTransmitting ? 1.15 : 1.0)
+                                    .animation(
+                                        Animation.easeInOut(duration: 1.5)
+                                            .repeatForever(autoreverses: true),
+                                        value: audioManager.isTransmitting
+                                    )
+                            }
+                            
+                            // Imagen del micrófono (AÚN MÁS GRANDE)
+                            Image("microphone_image") // Agrega tu imagen en Assets
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 350, height: 350) // Aumentado de 300 a 350
+                                .shadow(
+                                    color: audioManager.isTransmitting ? .green.opacity(0.6) : .black.opacity(0.4),
+                                    radius: 40,
+                                    y: 15
+                                )
+                            
+                            // Switch/Botón circular sobre el micrófono (también más grande)
+                            VStack {
+                                Spacer()
+                                Button(action: toggleMicrophone) {
+                                    ZStack {
+                                        // Fondo del botón
+                                        Circle()
+                                            .fill(
+                                                audioManager.isTransmitting
+                                                    ? Color.green
+                                                    : Color.gray.opacity(0.6)
+                                            )
+                                            .frame(width: 95, height: 95) // Aumentado de 85 a 95
+                                            .shadow(
+                                                color: audioManager.isTransmitting ? .green.opacity(0.7) : .black.opacity(0.4),
+                                                radius: 15,
+                                                y: 8
+                                            )
+                                        
+                                        // Icono
+                                        Image(systemName: audioManager.isTransmitting ? "mic.fill" : "mic.slash.fill")
+                                            .font(.system(size: 38)) // Aumentado de 34 a 38
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .disabled(!audioManager.isBluetoothConnected || audioManager.isInterrupted)
+
+
+                                .scaleEffect(audioManager.isTransmitting ? 1.08 : 1.0)
+                                .animation(.spring(response: 0.3), value: audioManager.isTransmitting)
+                                Capsule()
+                                    .fill(Color.green.opacity(0.7))
+                                    .frame(
+                                        width: CGFloat(120 + audioManager.micLevel * 120),
+                                        height: 6
+                                    )
+                                    .animation(.easeOut(duration: 0.1), value: audioManager.micLevel)
+                                    .opacity(audioManager.isTransmitting ? 1 : 0)
+                                
+                            }
+                            .frame(width: 350, height: 350)
+                            .padding(.top, 70)
+                        }
+                    }
+                    
+                    Spacer().frame(height: 50)
+                    
+                    // Estado del Bluetooth
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(audioManager.isBluetoothConnected ? Color.green : Color.red)
+                            .frame(width: 10, height: 10)
+                        
+                        Text(audioManager.isBluetoothConnected ? "bluetooth_connected".localized : "bluetooth_disconnected".localized)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(25)
+                    
+                    Spacer().frame(height: 30)
+                    
+                    // Texto de estado
+                    Text(audioManager.isTransmitting ? "stop_microphone".localized : "activate_microphone".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.7))
+                    
+                    Spacer()
+                    
+                    // Mensaje de error
+                    if let errorMessage = audioManager.errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 13))
+                            .foregroundColor(.red.opacity(0.9))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 30)
+                            .padding(.bottom, 30)
+                    }
                 }
             }
+            .navigationBarBackButtonHidden(true)
+            .sheet(isPresented: $showProfile) {
+                ProfileView()
+            }
+            .sheet(isPresented: $showEffects) {
+                VoiceEffectsView()
+            }
+            .alert("bluetooth_required".localized, isPresented: $showAlert) {
+                Button("ok".localized, role: .cancel) { }
+            } message: {
+                Text("bluetooth_message".localized)
+            }
+            .onAppear {
+                audioManager.checkBluetoothStatus()
+            }
         }
-        .navigationBarBackButtonHidden(true)
-        .alert("Bluetooth Requerido", isPresented: $showAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Por favor conecta un altavoz Bluetooth para usar el micrófono.")
+    }
+    
+    // MARK: - Toggle Microphone
+    private func toggleMicrophone() {
+        if audioManager.isTransmitting {
+            audioManager.stopMicrophone()
+        } else {
+            if audioManager.isBluetoothConnected {
+                audioManager.startMicrophone()
+            } else {
+                showAlert = true
+            }
         }
-        .onAppear {
-            audioManager.checkBluetoothStatus()
+    }
+}
+
+// MARK: - Color Extension para usar HEX
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
         }
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
     }
 }
 
 #Preview {
     MainView()
         .environmentObject(AudioManager())
+        .environmentObject(AuthManager())
 }

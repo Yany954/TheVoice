@@ -1,0 +1,47 @@
+/* 
+  Localizable.strings
+  TheVoice
+
+  Created by Yany Gonzalez Yepez on 1/18/26.
+  
+*/// Localizable.strings (Spanish)
+
+// Login Screen
+"welcome" = "Bienvenido";
+"welcome_subtitle" = "Crea una cuenta o loguéate para utilizar la app";
+"login_tab" = "Iniciar Sesión";
+"register_tab" = "Registro";
+"continue_google" = "Continuar con Google";
+"continue_facebook" = "Continuar con Facebook";
+
+// Register Screen
+"register_title" = "Crear Cuenta";
+"email_placeholder" = "Correo electrónico";
+"password_placeholder" = "Contraseña";
+"confirm_password_placeholder" = "Confirmar contraseña";
+"register_button" = "Registrarse";
+"already_have_account" = "¿Ya tienes cuenta?";
+
+// Main Screen
+"bluetooth_connected" = "Bluetooth conectado";
+"bluetooth_disconnected" = "Bluetooth desconectado";
+"activate_microphone" = "Activar Micrófono";
+"stop_microphone" = "Detener";
+
+// Profile Screen
+"profile" = "Perfil";
+"sign_out" = "Cerrar Sesión";
+"delete_account" = "Eliminar Cuenta";
+"sign_out_confirmation" = "¿Estás seguro que deseas cerrar sesión?";
+"delete_confirmation" = "Esta acción es permanente y no se puede deshacer. Se eliminarán todos tus datos.";
+"cancel" = "Cancelar";
+
+// Voice Effects
+"voice_effects" = "Efectos de Voz";
+"current_effect" = "Efecto Actual";
+
+// Alerts
+"bluetooth_required" = "Bluetooth Requerido";
+"bluetooth_message" = "Por favor conecta un altavoz Bluetooth para usar el micrófono.";
+"error_starting_mic" = "Error al iniciar el micrófono";
+"ok" = "Aceptar";

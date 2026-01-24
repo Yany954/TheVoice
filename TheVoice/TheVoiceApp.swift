@@ -6,15 +6,35 @@
 //
 
 import SwiftUI
+import FirebaseCore
 
 @main
 struct TheVoiceApp: App {
     @StateObject private var audioManager = AudioManager()
+    @StateObject private var authManager = AuthManager()
+    
+    init(){
+        FirebaseApp.configure()
+    }
     
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            ContentView2()
                 .environmentObject(audioManager)
+                .environmentObject(authManager)
+        }
+    }
+}
+struct ContentView2: View {
+    @EnvironmentObject var authManager: AuthManager
+    
+    var body: some View {
+        Group {
+            if authManager.isAuthenticated {
+                MainView()
+            } else {
+                LoginView()
+            }
         }
     }
 }

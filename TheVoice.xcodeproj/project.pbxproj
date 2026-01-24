@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		59146C982F1EECEE009E21C2 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 59146C972F1EECEE009E21C2 /* GoogleSignIn */; };
+		59146C9A2F1F2028009E21C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 59146C992F1F2028009E21C2 /* GoogleService-Info.plist */; };
 		59E82AA12F1DE781003663D9 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA02F1DE781003663D9 /* FirebaseAuth */; };
 		59E82AA32F1DE781003663D9 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA22F1DE781003663D9 /* FirebaseCore */; };
 		59E82AA52F1DE781003663D9 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA42F1DE781003663D9 /* FirebaseFirestore */; };
@@ -30,6 +32,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		59146C992F1F2028009E21C2 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		59E82A412F1DAABD003663D9 /* TheVoice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		59E82A522F1DAABF003663D9 /* TheVoiceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheVoiceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		59E82A5C2F1DAABF003663D9 /* TheVoiceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheVoiceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -40,6 +43,8 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Models/AudioManager.swift,
+				Models/AuthManager.swift,
+				Models/VoiceEffectManager.swift,
 			);
 			target = 59E82A512F1DAABF003663D9 /* TheVoiceTests */;
 		};
@@ -47,6 +52,8 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Models/AudioManager.swift,
+				Models/AuthManager.swift,
+				Models/VoiceEffectManager.swift,
 			);
 			target = 59E82A5B2F1DAABF003663D9 /* TheVoiceUITests */;
 		};
@@ -93,6 +100,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				59E82AA32F1DE781003663D9 /* FirebaseCore in Frameworks */,
+				59146C982F1EECEE009E21C2 /* GoogleSignIn in Frameworks */,
 				59E82AA12F1DE781003663D9 /* FirebaseAuth in Frameworks */,
 				59E82AA52F1DE781003663D9 /* FirebaseFirestore in Frameworks */,
 			);
@@ -118,6 +126,7 @@
 		59E82A382F1DAABC003663D9 = {
 			isa = PBXGroup;
 			children = (
+				59146C992F1F2028009E21C2 /* GoogleService-Info.plist */,
 				59E82A9C2F1DDEA3003663D9 /* Localization */,
 				59E82A432F1DAABD003663D9 /* TheVoice */,
 				59E82A552F1DAABF003663D9 /* TheVoiceTests */,
@@ -160,6 +169,7 @@
 				59E82AA02F1DE781003663D9 /* FirebaseAuth */,
 				59E82AA22F1DE781003663D9 /* FirebaseCore */,
 				59E82AA42F1DE781003663D9 /* FirebaseFirestore */,
+				59146C972F1EECEE009E21C2 /* GoogleSignIn */,
 			);
 			productName = TheVoice;
 			productReference = 59E82A412F1DAABD003663D9 /* TheVoice.app */;
@@ -240,11 +250,13 @@
 			knownRegions = (
 				en,
 				Base,
+				es,
 			);
 			mainGroup = 59E82A382F1DAABC003663D9;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				59146C962F1EECEE009E21C2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 59E82A422F1DAABD003663D9 /* Products */;
@@ -263,6 +275,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				59146C9A2F1F2028009E21C2 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -325,6 +338,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -386,6 +400,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -654,6 +669,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		59146C962F1EECEE009E21C2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
 		59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -665,6 +688,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		59146C972F1EECEE009E21C2 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59146C962F1EECEE009E21C2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
 		59E82AA02F1DE781003663D9 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
