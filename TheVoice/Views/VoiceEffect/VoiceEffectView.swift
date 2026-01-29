@@ -71,15 +71,12 @@ struct VoiceEffectsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         ForEach(filteredEffects) { effect in
-                            // Dentro del ForEach de efectos
                             EffectCard(
                                 effect: effect,
-                                isSelected: audioManager.currentEffect == effect,
-                                onSelect: {
-                                    // LLAMADA CORRECTA: Sin el signo '$'
-                                    audioManager.applyEffect(effect)
-                                }
-                            )
+                                isSelected: audioManager.currentEffect == effect
+                            ) {
+                                audioManager.applyEffect(effect)
+                            }
                         }
                     }
                     .padding(.horizontal, 24)
@@ -88,6 +85,15 @@ struct VoiceEffectsView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .alert("Error", isPresented: .constant(audioManager.errorMessage != nil && audioManager.errorMessage?.contains("Detén el micrófono") == true)) {
+            Button("OK", role: .cancel) {
+                audioManager.errorMessage = nil
+            }
+        } message: {
+            if let error = audioManager.errorMessage {
+                Text(error)
+            }
+        }
     }
     
     var filteredEffects: [VoiceEffect] {

@@ -14,11 +14,17 @@
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>GoogleSignIn</string>
+            <key>NSMicrophoneUsageDescription</key>
+            <string>Need microphone access for the app to work</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.824754632863-pqa4vp5u94v65rdrshmtp7q6m5b8dipg</string>
 			</array>
 		</dict>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
 	</array>
 </dict>
 </plist>

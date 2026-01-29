@@ -5,7 +5,6 @@ import UIKit
 final class AudioManager: ObservableObject {
 
     // MARK: - UI State
-
     @Published private(set) var isTransmitting = false
     @Published private(set) var isBluetoothConnected = false
     @Published private(set) var isInterrupted = false
@@ -15,13 +14,18 @@ final class AudioManager: ObservableObject {
     @Published var errorMessage: String?
 
     // MARK: - Audio Core
-
     private let audioSession = AVAudioSession.sharedInstance()
     private let engine = AVAudioEngine()
     private var inputNode: AVAudioInputNode?
+    
+    // Audio Units para efectos (creados bajo demanda)
+    private var pitchControl: AVAudioUnitTimePitch?
+    private var reverb: AVAudioUnitReverb?
+    private var distortion: AVAudioUnitDistortion?
+    private var delay: AVAudioUnitDelay?
+    private var eq: AVAudioUnitEQ?
 
     // MARK: - Init
-
     init() {
         configureNotifications()
         checkBluetoothStatus()
@@ -33,7 +37,6 @@ final class AudioManager: ObservableObject {
     }
 
     // MARK: - Public API
-
     func startMicrophone() {
         guard !isTransmitting else { return }
         guard !isInterrupted else { return }
@@ -41,13 +44,22 @@ final class AudioManager: ObservableObject {
         do {
             try configureSession()
             try startEngine()
-            installMeterTap()
+            
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                self?.installMeterTap()
+            }
 
             isTransmitting = true
             errorMessage = nil
+            
+     
+            print(" Micrófono iniciado con efecto: \(currentEffect.rawValue)")
+            
         } catch {
             errorMessage = error.localizedDescription
             stopMicrophone()
+            print(" Error al iniciar: \(error)")
         }
     }
 
@@ -55,14 +67,27 @@ final class AudioManager: ObservableObject {
         removeMeterTap()
         engine.stop()
         engine.reset()
+        
+
+        cleanupEffectNodes()
 
         isTransmitting = false
         micLevel = 0
     }
 
     func applyEffect(_ effect: VoiceEffect) {
+
+        guard !isTransmitting else {
+            errorMessage = "Detén el micrófono antes de cambiar el efecto"
+            print(" Intento de cambiar efecto con mic activo")
+            return
+        }
+        
         currentEffect = effect
-        // Effects must be applied ONLY when engine is stopped
+        errorMessage = nil
+        
+        // Debug: Imprimir efecto aplicado
+        print(" Efecto aplicado: \(effect.rawValue)")
     }
 
     func checkBluetoothStatus() {
@@ -74,12 +99,11 @@ final class AudioManager: ObservableObject {
     }
 
     // MARK: - Audio Setup
-
     private func configureSession() throws {
         try audioSession.setCategory(
             .playAndRecord,
             mode: .voiceChat,
-            options: [.allowBluetooth, .defaultToSpeaker]
+            options: [.allowBluetooth, .defaultToSpeaker, .mixWithOthers]
         )
         try audioSession.setActive(true)
     }
@@ -87,21 +111,214 @@ final class AudioManager: ObservableObject {
     private func startEngine() throws {
         engine.stop()
         engine.reset()
+        
+        // Limpiar efectos anteriores
+        cleanupEffectNodes()
 
         inputNode = engine.inputNode
         guard let inputNode else {
-            throw NSError(domain: "Audio", code: -1)
+            throw NSError(domain: "Audio", code: -1, userInfo: [NSLocalizedDescriptionKey: "No se pudo acceder al micrófono"])
         }
 
         let format = inputNode.outputFormat(forBus: 0)
+        
+        print(" Configurando engine con efecto: \(currentEffect.rawValue)")
+        print(" Formato de audio: \(format)")
+        
 
-        engine.connect(inputNode, to: engine.mainMixerNode, format: format)
+        if currentEffect != .none {
+            try setupEffectChain(inputNode: inputNode, format: format)
+        } else {
+            // Conexión directa sin efectos
+            engine.connect(inputNode, to: engine.mainMixerNode, format: format)
+            print(" Conexión directa (sin efectos)")
+        }
 
         try engine.start()
+        print(" Engine iniciado correctamente")
+    }
+    
+    // MARK: - Effect Chain Setup
+    private func setupEffectChain(inputNode: AVAudioInputNode, format: AVAudioFormat) throws {
+        let mainMixer = engine.mainMixerNode
+        
+        print(" Configurando cadena de efectos para: \(currentEffect.rawValue)")
+        
+        switch currentEffect {
+        case .none:
+
+            break
+            
+        case .helium, .monster, .demon, .autoTune:
+            // Solo pitch
+            let pitch = AVAudioUnitTimePitch()
+            configurePitchEffect(pitch, for: currentEffect)
+            engine.attach(pitch)
+            engine.connect(inputNode, to: pitch, format: format)
+            engine.connect(pitch, to: mainMixer, format: format)
+            pitchControl = pitch
+            print(" Pitch configurado: \(pitch.pitch) cents")
+            
+        case .robot:
+            // Pitch + Distortion
+            let pitch = AVAudioUnitTimePitch()
+            let dist = AVAudioUnitDistortion()
+            configurePitchEffect(pitch, for: currentEffect)
+            configureDistortionEffect(dist, for: currentEffect)
+            engine.attach(pitch)
+            engine.attach(dist)
+            engine.connect(inputNode, to: pitch, format: format)
+            engine.connect(pitch, to: dist, format: format)
+            engine.connect(dist, to: mainMixer, format: format)
+            pitchControl = pitch
+            distortion = dist
+            print("Robot: Pitch + Distortion configurados")
+            
+        case .echo, .rhythmicDelay:
+            // Solo delay
+            let del = AVAudioUnitDelay()
+            configureDelayEffect(del, for: currentEffect)
+            engine.attach(del)
+            engine.connect(inputNode, to: del, format: format)
+            engine.connect(del, to: mainMixer, format: format)
+            delay = del
+            print("Delay configurado: \(del.delayTime)s")
+            
+        case .cathedral, .stadium:
+            // Solo reverb
+            let rev = AVAudioUnitReverb()
+            configureReverbEffect(rev, for: currentEffect)
+            engine.attach(rev)
+            engine.connect(inputNode, to: rev, format: format)
+            engine.connect(rev, to: mainMixer, format: format)
+            reverb = rev
+            print("Reverb configurado")
+            
+        case .studio, .feedbackSupressor:
+            // Solo EQ
+            let equalizer = AVAudioUnitEQ(numberOfBands: 3)
+            configureEQEffect(equalizer, for: currentEffect)
+            engine.attach(equalizer)
+            engine.connect(inputNode, to: equalizer, format: format)
+            engine.connect(equalizer, to: mainMixer, format: format)
+            eq = equalizer
+            print(" EQ configurado")
+            
+        case .spy, .walkieTalkie:
+            // Solo distortion
+            let dist = AVAudioUnitDistortion()
+            configureDistortionEffect(dist, for: currentEffect)
+            engine.attach(dist)
+            engine.connect(inputNode, to: dist, format: format)
+            engine.connect(dist, to: mainMixer, format: format)
+            distortion = dist
+            print("Distortion configurado")
+        }
+    }
+    
+    // MARK: - Effect Configuration (como en el repositorio)
+    private func configurePitchEffect(_ pitch: AVAudioUnitTimePitch, for effect: VoiceEffect) {
+        switch effect {
+        case .helium:
+            pitch.pitch = 1000
+        case .robot:
+            pitch.pitch = -200
+            pitch.rate = 0.95
+        case .monster:
+            pitch.pitch = -1200
+        case .demon:
+            pitch.pitch = -1000
+            pitch.rate = 0.85
+        case .autoTune:
+            pitch.pitch = 100
+        default:
+            break
+        }
+    }
+    
+    private func configureDistortionEffect(_ dist: AVAudioUnitDistortion, for effect: VoiceEffect) {
+        switch effect {
+        case .robot:
+            dist.loadFactoryPreset(.multiBrokenSpeaker)
+            dist.wetDryMix = 50
+        case .spy:
+            dist.loadFactoryPreset(.speechRadioTower)
+            dist.wetDryMix = 50
+        case .walkieTalkie:
+            dist.loadFactoryPreset(.speechRadioTower)
+            dist.wetDryMix = 70
+        default:
+            break
+        }
+    }
+    
+    private func configureDelayEffect(_ del: AVAudioUnitDelay, for effect: VoiceEffect) {
+        switch effect {
+        case .echo:
+            del.delayTime = 0.3
+            del.feedback = 50
+            del.wetDryMix = 40
+        case .rhythmicDelay:
+            del.delayTime = 0.5
+            del.feedback = 60
+            del.wetDryMix = 50
+        default:
+            break
+        }
+    }
+    
+    private func configureReverbEffect(_ rev: AVAudioUnitReverb, for effect: VoiceEffect) {
+        switch effect {
+        case .cathedral:
+            rev.loadFactoryPreset(.cathedral)
+            rev.wetDryMix = 60
+        case .stadium:
+            rev.loadFactoryPreset(.largeHall)
+            rev.wetDryMix = 70
+        default:
+            break
+        }
+    }
+    
+    private func configureEQEffect(_ equalizer: AVAudioUnitEQ, for effect: VoiceEffect) {
+        switch effect {
+        case .studio:
+            equalizer.bands[0].frequency = 100
+            equalizer.bands[0].gain = 3
+            equalizer.bands[0].filterType = .parametric
+            equalizer.bands[0].bypass = false
+            
+            equalizer.bands[1].frequency = 2000
+            equalizer.bands[1].gain = 4
+            equalizer.bands[1].filterType = .parametric
+            equalizer.bands[1].bypass = false
+            
+            equalizer.bands[2].frequency = 8000
+            equalizer.bands[2].gain = 2
+            equalizer.bands[2].filterType = .parametric
+            equalizer.bands[2].bypass = false
+            
+        case .feedbackSupressor:
+            equalizer.bands[0].frequency = 2000
+            equalizer.bands[0].gain = -12
+            equalizer.bands[0].filterType = .parametric
+            equalizer.bands[0].bypass = false
+            
+        default:
+            break
+        }
+    }
+    
+    // MARK: - Cleanup Effect Nodes
+    private func cleanupEffectNodes() {
+        pitchControl = nil
+        reverb = nil
+        distortion = nil
+        delay = nil
+        eq = nil
     }
 
-    // MARK: - Mic Level Meter (CORRECT)
-
+    // MARK: - Mic Level Meter
     private func installMeterTap() {
         guard let inputNode else { return }
 
@@ -141,9 +358,7 @@ final class AudioManager: ObservableObject {
     }
 
     // MARK: - Notifications
-
     private func configureNotifications() {
-
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleInterruption),
@@ -174,7 +389,6 @@ final class AudioManager: ObservableObject {
     }
 
     // MARK: - Handlers
-
     @objc private func handleInterruption(_ notification: Notification) {
         guard
             let info = notification.userInfo,
@@ -185,20 +399,45 @@ final class AudioManager: ObservableObject {
         if type == .began {
             isInterrupted = true
             stopMicrophone()
-        } else {
+        } else if type == .ended {
             isInterrupted = false
+            
+            if let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt {
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Audio interrumpido. Presiona para continuar."
+                    }
+                }
+            }
         }
     }
 
     @objc private func appDidEnterBackground() {
-        stopMicrophone()
+        print("App entered background - audio continúa")
     }
 
     @objc private func appWillEnterForeground() {
         checkBluetoothStatus()
+        
+        if isTransmitting {
+            do {
+                try audioSession.setActive(true)
+            } catch {
+                print("Error reactivando sesión: \(error)")
+            }
+        }
     }
 
     @objc private func routeChanged() {
+        let wasConnected = isBluetoothConnected
         checkBluetoothStatus()
+        
+        if wasConnected && !isBluetoothConnected && isTransmitting {
+            DispatchQueue.main.async {
+                self.stopMicrophone()
+                self.errorMessage = "Bluetooth desconectado"
+            }
+        }
     }
 }

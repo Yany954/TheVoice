@@ -10,12 +10,12 @@ struct MainView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Degradado mejorado: morado arriba → negro abajo
+                
                 LinearGradient(
                     colors: [
-                        Color(hex: "271C67"),  // Morado oscuro arriba
-                        Color(hex: "1a1544"),  // Morado medio
-                        Color(hex: "020209")   // Negro abajo
+                        Color(hex: "271C67"),
+                        Color(hex: "1a1544"),
+                        Color(hex: "020209")
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -25,17 +25,24 @@ struct MainView: View {
                 VStack(spacing: 0) {
                     // Header
                     HStack {
-                        // Botón de efectos de voz (reemplaza el botón de atrás)
+                        
                         Button(action: {
-                            showEffects = true
+                            if !audioManager.isTransmitting {
+                                showEffects = true
+                            }
                         }) {
                             Image(systemName: "waveform.circle.fill")
                                 .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(.white)
+                                .foregroundColor(audioManager.isTransmitting ? .gray : .white)
                                 .frame(width: 44, height: 44)
-                                .background(Color.white.opacity(0.15))
+                                .background(
+                                    audioManager.isTransmitting
+                                        ? Color.gray.opacity(0.3)
+                                        : Color.white.opacity(0.15)
+                                )
                                 .clipShape(Circle())
                         }
+                        .disabled(audioManager.isTransmitting)
                         
                         Spacer()
                         
@@ -141,24 +148,13 @@ struct MainView: View {
                                         
                                         // Icono
                                         Image(systemName: audioManager.isTransmitting ? "mic.fill" : "mic.slash.fill")
-                                            .font(.system(size: 38)) // Aumentado de 34 a 38
+                                            .font(.system(size: 38))
                                             .foregroundColor(.white)
                                     }
                                 }
-                                .disabled(!audioManager.isBluetoothConnected || audioManager.isInterrupted)
-
-
+                                .disabled(!audioManager.isBluetoothConnected && !audioManager.isTransmitting)
                                 .scaleEffect(audioManager.isTransmitting ? 1.08 : 1.0)
                                 .animation(.spring(response: 0.3), value: audioManager.isTransmitting)
-                                Capsule()
-                                    .fill(Color.green.opacity(0.7))
-                                    .frame(
-                                        width: CGFloat(120 + audioManager.micLevel * 120),
-                                        height: 6
-                                    )
-                                    .animation(.easeOut(duration: 0.1), value: audioManager.micLevel)
-                                    .opacity(audioManager.isTransmitting ? 1 : 0)
-                                
                             }
                             .frame(width: 350, height: 350)
                             .padding(.top, 70)
@@ -167,7 +163,6 @@ struct MainView: View {
                     
                     Spacer().frame(height: 50)
                     
-                    // Estado del Bluetooth
                     HStack(spacing: 10) {
                         Circle()
                             .fill(audioManager.isBluetoothConnected ? Color.green : Color.red)
@@ -191,7 +186,6 @@ struct MainView: View {
                     
                     Spacer()
                     
-                    // Mensaje de error
                     if let errorMessage = audioManager.errorMessage {
                         Text(errorMessage)
                             .font(.system(size: 13))
