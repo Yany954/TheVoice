@@ -45,6 +45,7 @@
 				Models/AudioManager.swift,
 				Models/AuthManager.swift,
 				Models/VoiceEffectManager.swift,
+				Views/Premium/PremiumView.swift,
 			);
 			target = 59E82A512F1DAABF003663D9 /* TheVoiceTests */;
 		};
@@ -54,6 +55,7 @@
 				Models/AudioManager.swift,
 				Models/AuthManager.swift,
 				Models/VoiceEffectManager.swift,
+				Views/Premium/PremiumView.swift,
 			);
 			target = 59E82A5B2F1DAABF003663D9 /* TheVoiceUITests */;
 		};

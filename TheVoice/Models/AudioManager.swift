@@ -18,8 +18,11 @@ final class AudioManager: ObservableObject {
     private let engine = AVAudioEngine()
     private var inputNode: AVAudioInputNode?
     
-    // Audio Units para efectos (creados bajo demanda)
-    private var pitchControl: AVAudioUnitTimePitch?
+    // Player node para reproducir el audio capturado
+    private let playerNode = AVAudioPlayerNode()
+    
+    // Audio Units para efectos
+    private var varispeed: AVAudioUnitVarispeed?
     private var reverb: AVAudioUnitReverb?
     private var distortion: AVAudioUnitDistortion?
     private var delay: AVAudioUnitDelay?
@@ -44,31 +47,24 @@ final class AudioManager: ObservableObject {
         do {
             try configureSession()
             try startEngine()
-            
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-                self?.installMeterTap()
-            }
 
             isTransmitting = true
             errorMessage = nil
             
-     
-            print(" Micrófono iniciado con efecto: \(currentEffect.rawValue)")
+            print("🎤 Micrófono iniciado con efecto: \(currentEffect.rawValue)")
             
         } catch {
             errorMessage = error.localizedDescription
             stopMicrophone()
-            print(" Error al iniciar: \(error)")
+            print("❌ Error al iniciar: \(error)")
         }
     }
 
     func stopMicrophone() {
-        removeMeterTap()
+        playerNode.stop()
         engine.stop()
         engine.reset()
         
-
         cleanupEffectNodes()
 
         isTransmitting = false
@@ -76,7 +72,6 @@ final class AudioManager: ObservableObject {
     }
 
     func applyEffect(_ effect: VoiceEffect) {
-
         guard !isTransmitting else {
             errorMessage = "Detén el micrófono antes de cambiar el efecto"
             print(" Intento de cambiar efecto con mic activo")
@@ -85,8 +80,6 @@ final class AudioManager: ObservableObject {
         
         currentEffect = effect
         errorMessage = nil
-        
-        // Debug: Imprimir efecto aplicado
         print(" Efecto aplicado: \(effect.rawValue)")
     }
 
@@ -111,8 +104,6 @@ final class AudioManager: ObservableObject {
     private func startEngine() throws {
         engine.stop()
         engine.reset()
-        
-        // Limpiar efectos anteriores
         cleanupEffectNodes()
 
         inputNode = engine.inputNode
@@ -125,114 +116,150 @@ final class AudioManager: ObservableObject {
         print(" Configurando engine con efecto: \(currentEffect.rawValue)")
         print(" Formato de audio: \(format)")
         
-
-        if currentEffect != .none {
-            try setupEffectChain(inputNode: inputNode, format: format)
-        } else {
-            // Conexión directa sin efectos
-            engine.connect(inputNode, to: engine.mainMixerNode, format: format)
-            print(" Conexión directa (sin efectos)")
-        }
-
+        // Adjuntar player node
+        engine.attach(playerNode)
+        
+        // Configurar cadena de efectos desde playerNode (NO desde inputNode)
+        setupEffectChain(playerNode: playerNode, format: format)
+        
+        // CRÍTICO: Iniciar engine PRIMERO
         try engine.start()
         print(" Engine iniciado correctamente")
+        
+        // LUEGO iniciar player
+        playerNode.play()
+        print(" PlayerNode iniciado")
+        
+        // FINALMENTE instalar tap (con pequeño delay para asegurar que todo esté listo)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.installMicrophoneTap(format: format)
+            print("Tap instalado")
+        }
     }
     
-    // MARK: - Effect Chain Setup
-    private func setupEffectChain(inputNode: AVAudioInputNode, format: AVAudioFormat) throws {
+    // MARK: - Microphone Tap (Solución de Stack Overflow)
+    private func installMicrophoneTap(format: AVAudioFormat) {
+        guard let inputNode else { return }
+        
+        inputNode.removeTap(onBus: 0)
+        
+        // Tap para capturar y reproducir audio en tiempo real
+        inputNode.installTap(onBus: 0, bufferSize: 256, format: format) { [weak self] buffer, time in
+            guard let self = self else { return }
+            
+            // Reproducir buffer capturado a través del playerNode
+            // Esto permite aplicar efectos
+            self.playerNode.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
+            
+            // Calcular nivel de micrófono
+            self.calculateMicLevel(from: buffer)
+        }
+    }
+    
+    // MARK: - Effect Chain Setup (desde playerNode)
+    private func setupEffectChain(playerNode: AVAudioPlayerNode, format: AVAudioFormat) {
         let mainMixer = engine.mainMixerNode
         
         print(" Configurando cadena de efectos para: \(currentEffect.rawValue)")
         
         switch currentEffect {
         case .none:
-
-            break
+            // Conexión directa
+            engine.connect(playerNode, to: mainMixer, format: format)
+            print("Conexión directa (sin efectos)")
             
         case .helium, .monster, .demon, .autoTune:
-            // Solo pitch
-            let pitch = AVAudioUnitTimePitch()
-            configurePitchEffect(pitch, for: currentEffect)
-            engine.attach(pitch)
-            engine.connect(inputNode, to: pitch, format: format)
-            engine.connect(pitch, to: mainMixer, format: format)
-            pitchControl = pitch
-            print(" Pitch configurado: \(pitch.pitch) cents")
+            let speed = AVAudioUnitVarispeed()
+            configureVarispeedEffect(speed, for: currentEffect)
+            engine.attach(speed)
+            engine.connect(playerNode, to: speed, format: format)
+            engine.connect(speed, to: mainMixer, format: format)
+            varispeed = speed
+            print("Varispeed configurado: rate=\(speed.rate)")
             
         case .robot:
-            // Pitch + Distortion
-            let pitch = AVAudioUnitTimePitch()
+            let speed = AVAudioUnitVarispeed()
             let dist = AVAudioUnitDistortion()
-            configurePitchEffect(pitch, for: currentEffect)
+            configureVarispeedEffect(speed, for: currentEffect)
             configureDistortionEffect(dist, for: currentEffect)
-            engine.attach(pitch)
+            engine.attach(speed)
             engine.attach(dist)
-            engine.connect(inputNode, to: pitch, format: format)
-            engine.connect(pitch, to: dist, format: format)
+            engine.connect(playerNode, to: speed, format: format)
+            engine.connect(speed, to: dist, format: format)
             engine.connect(dist, to: mainMixer, format: format)
-            pitchControl = pitch
+            varispeed = speed
             distortion = dist
-            print("Robot: Pitch + Distortion configurados")
+            print(" Robot: Varispeed + Distortion")
             
         case .echo, .rhythmicDelay:
-            // Solo delay
             let del = AVAudioUnitDelay()
             configureDelayEffect(del, for: currentEffect)
             engine.attach(del)
-            engine.connect(inputNode, to: del, format: format)
+            engine.connect(playerNode, to: del, format: format)
             engine.connect(del, to: mainMixer, format: format)
             delay = del
-            print("Delay configurado: \(del.delayTime)s")
+            print(" Delay configurado")
             
         case .cathedral, .stadium:
-            // Solo reverb
             let rev = AVAudioUnitReverb()
             configureReverbEffect(rev, for: currentEffect)
             engine.attach(rev)
-            engine.connect(inputNode, to: rev, format: format)
+            engine.connect(playerNode, to: rev, format: format)
             engine.connect(rev, to: mainMixer, format: format)
             reverb = rev
-            print("Reverb configurado")
+            print(" Reverb configurado")
             
         case .studio, .feedbackSupressor:
-            // Solo EQ
             let equalizer = AVAudioUnitEQ(numberOfBands: 3)
             configureEQEffect(equalizer, for: currentEffect)
             engine.attach(equalizer)
-            engine.connect(inputNode, to: equalizer, format: format)
+            engine.connect(playerNode, to: equalizer, format: format)
             engine.connect(equalizer, to: mainMixer, format: format)
             eq = equalizer
-            print(" EQ configurado")
+            print("EQ configurado")
             
         case .spy, .walkieTalkie:
-            // Solo distortion
             let dist = AVAudioUnitDistortion()
             configureDistortionEffect(dist, for: currentEffect)
             engine.attach(dist)
-            engine.connect(inputNode, to: dist, format: format)
+            engine.connect(playerNode, to: dist, format: format)
             engine.connect(dist, to: mainMixer, format: format)
             distortion = dist
-            print("Distortion configurado")
+            print(" Distortion configurado")
         }
     }
     
-    // MARK: - Effect Configuration (como en el repositorio)
-    private func configurePitchEffect(_ pitch: AVAudioUnitTimePitch, for effect: VoiceEffect) {
+    // MARK: - Calculate Mic Level
+    private func calculateMicLevel(from buffer: AVAudioPCMBuffer) {
+        guard let channelData = buffer.floatChannelData?[0] else { return }
+        let frameLength = Int(buffer.frameLength)
+        
+        var rms: Float = 0
+        for i in 0..<frameLength {
+            rms += channelData[i] * channelData[i]
+        }
+        rms = sqrt(rms / Float(frameLength))
+        
+        DispatchQueue.main.async {
+            self.micLevel = min(max(rms * 20, 0), 1)
+        }
+    }
+    
+    // MARK: - Effect Configuration
+    private func configureVarispeedEffect(_ speed: AVAudioUnitVarispeed, for effect: VoiceEffect) {
         switch effect {
         case .helium:
-            pitch.pitch = 1000
+            speed.rate = 2.0
         case .robot:
-            pitch.pitch = -200
-            pitch.rate = 0.95
+            speed.rate = 0.75
         case .monster:
-            pitch.pitch = -1200
+            speed.rate = 0.5
         case .demon:
-            pitch.pitch = -1000
-            pitch.rate = 0.85
+            speed.rate = 0.6
         case .autoTune:
-            pitch.pitch = 100
+            speed.rate = 1.05
         default:
-            break
+            speed.rate = 1.0
         }
     }
     
@@ -309,52 +336,13 @@ final class AudioManager: ObservableObject {
         }
     }
     
-    // MARK: - Cleanup Effect Nodes
+    // MARK: - Cleanup
     private func cleanupEffectNodes() {
-        pitchControl = nil
+        varispeed = nil
         reverb = nil
         distortion = nil
         delay = nil
         eq = nil
-    }
-
-    // MARK: - Mic Level Meter
-    private func installMeterTap() {
-        guard let inputNode else { return }
-
-        let bus = 0
-        let format = inputNode.outputFormat(forBus: bus)
-
-        inputNode.removeTap(onBus: bus)
-
-        inputNode.installTap(
-            onBus: bus,
-            bufferSize: 1024,
-            format: format
-        ) { [weak self] buffer, _ in
-            guard let self else { return }
-
-            let channelData = buffer.floatChannelData?[0]
-            let frameLength = Int(buffer.frameLength)
-
-            guard let channelData else { return }
-
-            var rms: Float = 0
-
-            for i in 0..<frameLength {
-                rms += channelData[i] * channelData[i]
-            }
-
-            rms = sqrt(rms / Float(frameLength))
-
-            DispatchQueue.main.async {
-                self.micLevel = min(max(rms * 20, 0), 1)
-            }
-        }
-    }
-
-    private func removeMeterTap() {
-        inputNode?.removeTap(onBus: 0)
     }
 
     // MARK: - Notifications

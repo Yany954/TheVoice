@@ -5,6 +5,7 @@ struct ProfileView: View {
     @Environment(\.dismiss) var dismiss
     @State private var showDeleteAlert = false
     @State private var showSignOutAlert = false
+    @State private var showPremium = false
     
     var body: some View {
         ZStack {
@@ -92,6 +93,37 @@ struct ProfileView: View {
                         
                         // Información de cuenta
                         VStack(spacing: 16) {
+                            // Botón Premium destacado
+                            Button(action: { showPremium = true }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "crown.fill")
+                                        .font(.system(size: 20))
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Hazte Premium")
+                                            .font(.system(size: 16, weight: .bold))
+                                        Text("Desbloquea todos los efectos")
+                                            .font(.system(size: 13))
+                                            .opacity(0.8)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                }
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.yellow, Color.orange],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                                .shadow(color: .yellow.opacity(0.3), radius: 10, y: 5)
+                            }
+                            
                             ProfileInfoCard(
                                 icon: "envelope.fill",
                                 title: "Email",
@@ -153,6 +185,9 @@ struct ProfileView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .sheet(isPresented: $showPremium) {
+            PremiumView()
+        }
         .alert("Cerrar Sesión", isPresented: $showSignOutAlert) {
             Button("Cancelar", role: .cancel) { }
             Button("Cerrar Sesión", role: .destructive) {
