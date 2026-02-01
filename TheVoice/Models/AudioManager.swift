@@ -21,11 +21,13 @@ final class AudioManager: ObservableObject {
     private var mixer: Mixer?
     private var engine: AudioEngine?
     
-    // AudioKit Effects
+    // AudioKit Effects (componentes disponibles en AudioKit 5.6.5)
     private var pitchShifter: PitchShifter?
     private var reverb: Reverb?
     private var distortion: Distortion?
     private var delay: Delay?
+    private var peakingParametricEQ: PeakingParametricEqualizerFilter?
+    private var dynamicsProcessor: DynamicsProcessor?
     
     // AVAudioSession para Bluetooth
     private let audioSession = AVAudioSession.sharedInstance()
@@ -73,6 +75,8 @@ final class AudioManager: ObservableObject {
         reverb = nil
         distortion = nil
         delay = nil
+        peakingParametricEQ = nil
+        dynamicsProcessor = nil
         mixer = nil
         levelTap = nil
         
@@ -81,11 +85,6 @@ final class AudioManager: ObservableObject {
     }
 
     func applyEffect(_ effect: VoiceEffect) {
-        /*guard !effect.isPremium else {
-            errorMessage = "Este efecto es Premium"
-            return
-        }*/
-        
         guard !isTransmitting else {
             errorMessage = "Detén el micrófono antes de cambiar el efecto"
             return
@@ -151,6 +150,7 @@ final class AudioManager: ObservableObject {
         var currentNode: Node = input
         
         switch currentEffect {
+            
         case .none:
             // Sin efectos
             mixer = Mixer(currentNode)
@@ -165,34 +165,74 @@ final class AudioManager: ObservableObject {
             return mixer!
             
         case .monster:
-            // Pitch shifter -12 semitonos (monstruo profundo)
+            // EFECTO VECNA MEJORADO
+            // Pitch muy bajo (-12 semitonos)
             let shifter = PitchShifter(currentNode, shift: -12)
+            
+            // EQ para atenuar agudos (usando PeakingParametricEqualizerFilter)
+            let eq = PeakingParametricEqualizerFilter(shifter)
+            eq.centerFrequency = 8000  // Frecuencias agudas
+            eq.q = 0.5  // Bandwidth inverso
+            eq.gain = -15  // Atenuar agudos
+            
+            // Reverb sutil para efecto de distancia
+            let rev = Reverb(eq)
+            rev.loadFactoryPreset(.mediumHall)
+            rev.dryWetMix = 0.35
+            
+            // Mixer final con volumen reducido
+            mixer = Mixer(rev)
+            mixer!.volume = 0.7
+            
             pitchShifter = shifter
-            mixer = Mixer(shifter)
-            print("✅ PitchShifter: -12 semitonos (Monstruo)")
+            peakingParametricEQ = eq
+            reverb = rev
+            print("✅ Monster: Pitch -12 + EQ oscuro + Reverb distante")
             return mixer!
             
-        
-            
         case .robot:
-            // Pitch -3 + Distortion
-            let shifter = PitchShifter(currentNode, shift: -3)
-            let dist = Distortion(shifter)
-            dist.delay = 0.1
-            dist.decay = 1.0
+            // EFECTO ROBOT SIMPLIFICADO (sin RingModulator)
+            // Pitch shifter moderado
+            let shifter = PitchShifter(currentNode, shift: -5)
+            shifter.crossfade = 256  // Más robótico
+            
+            // Delay muy corto para eco metálico
+            let del = Delay(shifter)
+            del.time = 0.005  // 5ms
+            del.feedback = 0.01
+            del.dryWetMix = 0.3
+            
+            // Distortion para carácter metálico
+            let dist = Distortion(del)
+            dist.delay = 0.05
+            dist.decay = 0.8
             dist.delayMix = 0.5
+            
+            // EQ para enfatizar frecuencias metálicas
+            let eq = PeakingParametricEqualizerFilter(dist)
+            eq.centerFrequency = 2000  // Frecuencias metálicas
+            eq.q = 1.0
+            eq.gain = 8
+            
             pitchShifter = shifter
+            delay = del
             distortion = dist
-            mixer = Mixer(dist)
-            print("✅ Robot: Pitch -3 + Distortion")
+            peakingParametricEQ = eq
+            mixer = Mixer(eq)
+            print("✅ Robot: Pitch + Delay metálico + Distortion + EQ")
             return mixer!
             
         case .autoTune:
-            // Pitch sutil +2 semitonos
-            let shifter = PitchShifter(currentNode, shift: 2)
+            let shifter = PitchShifter(currentNode, shift: 0)
+            shifter.crossfade = 4096  // Máxima suavidad
+            
+            let rev = Reverb(shifter)
+            rev.loadFactoryPreset(.smallRoom)
+            rev.dryWetMix = 0.08
+            
             pitchShifter = shifter
-            mixer = Mixer(shifter)
-            print("✅ Auto-Tune: +2 semitonos")
+            reverb = rev
+            mixer = Mixer(rev)
             return mixer!
             
         case .echo:
@@ -238,26 +278,75 @@ final class AudioManager: ObservableObject {
             return mixer!
             
         case .studio:
-            // Sin procesamiento especial por ahora
-            mixer = Mixer(currentNode)
+            // Solo EQ suave y Reverb muy sutil
+            let eq = PeakingParametricEqualizerFilter(currentNode)
+            eq.centerFrequency = 3000  // Presencia vocal
+            eq.q = 1.0
+            eq.gain = 2  // Ganancia suave
+            
+            // Reverb muy sutil
+            let rev = Reverb(eq)
+            rev.loadFactoryPreset(.mediumRoom)
+            rev.dryWetMix = 0.12  // Muy bajo para evitar cortes
+            
+            peakingParametricEQ = eq
+            reverb = rev
+            mixer = Mixer(rev)
+            print("✅ Studio: EQ suave + Reverb sutil")
             return mixer!
             
         case .feedbackSupressor:
-            // Sin procesamiento especial
-            mixer = Mixer(currentNode)
+            // Solo un EQ notch en frecuencia común de acople
+            let eq = PeakingParametricEqualizerFilter(currentNode)
+            eq.centerFrequency = 500  // Frecuencia típica de feedback
+            eq.q = 2.0  // Notch moderado
+            eq.gain = -12  // Reducción moderada
+            
+            // Volumen reducido
+            mixer = Mixer(eq)
+            mixer!.volume = 0.75  // No tan bajo como antes
+            
+            peakingParametricEQ = eq
+            print("✅ Feedback Suppressor: EQ notch simple")
             return mixer!
             
         case .spy:
+            // EFECTO SPY/ANONYMOUS SIMPLIFICADO (sin RingModulator)
+            // Pitch muy bajo
+            let shifter = PitchShifter(currentNode, shift: -8)
+            shifter.crossfade = 256  // Más artificial
+            
             // Distortion tipo radio
-            let dist = Distortion(currentNode)
+            let dist = Distortion(shifter)
             dist.delay = 0.05
             dist.decay = 0.5
             dist.delayMix = 0.5
+            
+            // EQ para oscurecer
+            let eq1 = PeakingParametricEqualizerFilter(dist)
+            eq1.centerFrequency = 6000
+            eq1.q = 0.7
+            eq1.gain = -10
+            
+            // EQ para agregar presencia metálica
+            let eq2 = PeakingParametricEqualizerFilter(eq1)
+            eq2.centerFrequency = 800
+            eq2.q = 1.5
+            eq2.gain = 6
+            
+            // Delay sutil
+            let del = Delay(eq2)
+            del.time = 0.08
+            del.feedback = 15
+            del.dryWetMix = 0.2
+            
+            pitchShifter = shifter
             distortion = dist
-            mixer = Mixer(dist)
-            print("✅ Spy: Radio Distortion")
+            peakingParametricEQ = eq1
+            delay = del
+            mixer = Mixer(del)
+            print("✅ Spy: Pitch bajo + Distortion + Multi-EQ + Delay")
             return mixer!
- 
         }
     }
     
@@ -275,8 +364,6 @@ final class AudioManager: ObservableObject {
             }
         }
         levelTap?.start()
-        
-        
     }
 
     // MARK: - Notifications
