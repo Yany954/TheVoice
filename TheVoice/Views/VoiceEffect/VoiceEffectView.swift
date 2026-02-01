@@ -4,6 +4,8 @@ struct VoiceEffectsView: View {
     @EnvironmentObject var audioManager: AudioManager
     @Environment(\.dismiss) var dismiss
     @State private var selectedCategory: EffectCategory = .basic
+    @State private var showPremium = false
+    
     
     var body: some View {
         ZStack {
@@ -75,6 +77,12 @@ struct VoiceEffectsView: View {
                                 effect: effect,
                                 isSelected: audioManager.currentEffect == effect
                             ) {
+                                /*if effect.isPremium {
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    showPremium = true
+                                } else {
+                                    audioManager.applyEffect(effect)
+                                }*/
                                 audioManager.applyEffect(effect)
                             }
                         }
@@ -84,6 +92,10 @@ struct VoiceEffectsView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPremium) {
+            PremiumView()
+        }
+        
         .navigationBarBackButtonHidden(true)
         .alert("Error", isPresented: .constant(audioManager.errorMessage != nil && audioManager.errorMessage?.contains("Detén el micrófono") == true)) {
             Button("OK", role: .cancel) {
@@ -95,6 +107,7 @@ struct VoiceEffectsView: View {
             }
         }
     }
+    
     
     var filteredEffects: [VoiceEffect] {
         VoiceEffect.allCases.filter { $0.category == selectedCategory }
@@ -121,16 +134,16 @@ struct CategoryTab: View {
             .padding(.vertical, 10)
             .background(
                 isSelected
-                    ? LinearGradient(
-                        colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.6)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    : LinearGradient(
-                        colors: [Color.white.opacity(0.1), Color.white.opacity(0.1)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                ? LinearGradient(
+                    colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.6)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                : LinearGradient(
+                    colors: [Color.white.opacity(0.1), Color.white.opacity(0.1)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
             )
             .cornerRadius(20)
         }
@@ -151,16 +164,16 @@ struct EffectCard: View {
                     Circle()
                         .fill(
                             isSelected
-                                ? LinearGradient(
-                                    colors: [Color.green.opacity(0.6), Color.blue.opacity(0.6)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                                : LinearGradient(
-                                    colors: [Color.white.opacity(0.15), Color.white.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                            ? LinearGradient(
+                                colors: [Color.green.opacity(0.6), Color.blue.opacity(0.6)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            : LinearGradient(
+                                colors: [Color.white.opacity(0.15), Color.white.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
                         .frame(width: 60, height: 60)
                     

@@ -47,7 +47,9 @@
 			membershipExceptions = (
 				Models/AudioManager.swift,
 				Models/AuthManager.swift,
+				Models/SubscriptionManager.swift,
 				Models/VoiceEffectManager.swift,
+				Views/Authentication/CustomTextField.swift,
 				Views/Premium/PremiumView.swift,
 			);
 			target = 59E82A512F1DAABF003663D9 /* TheVoiceTests */;
@@ -57,7 +59,9 @@
 			membershipExceptions = (
 				Models/AudioManager.swift,
 				Models/AuthManager.swift,
+				Models/SubscriptionManager.swift,
 				Models/VoiceEffectManager.swift,
+				Views/Authentication/CustomTextField.swift,
 				Views/Premium/PremiumView.swift,
 			);
 			target = 59E82A5B2F1DAABF003663D9 /* TheVoiceUITests */;

@@ -16,7 +16,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "240"
             endingLineNumber = "240"
-            landmarkName = "calculateMicLevel(from:)"
+            landmarkName = "setupAudioKitChain(input:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -32,7 +32,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "240"
             endingLineNumber = "240"
-            landmarkName = "calculateMicLevel(from:)"
+            landmarkName = "setupAudioKitChain(input:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

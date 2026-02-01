@@ -12,6 +12,7 @@ import FirebaseCore
 struct TheVoiceApp: App {
     @StateObject private var audioManager = AudioManager()
     @StateObject private var authManager = AuthManager()
+    @StateObject private var subscriptionManager = SubscriptionManager()
     
     init(){
         FirebaseApp.configure()
@@ -22,6 +23,7 @@ struct TheVoiceApp: App {
             ContentView2()
                 .environmentObject(audioManager)
                 .environmentObject(authManager)
+                .environmentObject(subscriptionManager)
         }
     }
 }
