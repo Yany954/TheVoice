@@ -20,9 +20,7 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
     
     // PREMIUM - Transformación Total
     case monster = "Monstruo"
-    case demon = "Demonio"
     case spy = "Modo Espía"
-    case walkieTalkie = "Walkie-Talkie"
     
     var id: String { self.rawValue }
     
@@ -45,7 +43,7 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
             return .professional
         case .cathedral, .stadium, .rhythmicDelay:
             return .ambient
-        case .monster, .demon, .spy, .walkieTalkie:
+        case .monster,.spy:
             return .transformation
         }
     }
@@ -63,9 +61,7 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
         case .stadium: return "sportscourt"
         case .rhythmicDelay: return "metronome"
         case .monster: return "flame.fill"
-        case .demon: return "eyes"
         case .spy: return "eye.slash"
-        case .walkieTalkie: return "radio"
         }
     }
     
@@ -93,12 +89,8 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
             return "Repeticiones controladas de tu voz"
         case .monster:
             return "Voz profunda y aterradora"
-        case .demon:
-            return "Transformación demoníaca extrema"
         case .spy:
             return "Voz distorsionada para agentes secretos"
-        case .walkieTalkie:
-            return "Efecto de radio vintage con estática"
         }
     }
 }
