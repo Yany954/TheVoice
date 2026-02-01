@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		59146C982F1EECEE009E21C2 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 59146C972F1EECEE009E21C2 /* GoogleSignIn */; };
 		59146C9A2F1F2028009E21C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 59146C992F1F2028009E21C2 /* GoogleService-Info.plist */; };
+		59BFEC172F2B59FB0034DB24 /* AudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = 59BFEC162F2B59FB0034DB24 /* AudioKit */; };
+		59BFEC1A2F2B5AF30034DB24 /* AudioKitEX in Frameworks */ = {isa = PBXBuildFile; productRef = 59BFEC192F2B5AF30034DB24 /* AudioKitEX */; };
+		59BFEC252F2B87880034DB24 /* SoundpipeAudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = 59BFEC242F2B87880034DB24 /* SoundpipeAudioKit */; };
 		59E82AA12F1DE781003663D9 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA02F1DE781003663D9 /* FirebaseAuth */; };
 		59E82AA32F1DE781003663D9 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA22F1DE781003663D9 /* FirebaseCore */; };
 		59E82AA52F1DE781003663D9 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 59E82AA42F1DE781003663D9 /* FirebaseFirestore */; };
@@ -106,7 +109,10 @@
 			files = (
 				59E82AA32F1DE781003663D9 /* FirebaseCore in Frameworks */,
 				59146C982F1EECEE009E21C2 /* GoogleSignIn in Frameworks */,
+				59BFEC172F2B59FB0034DB24 /* AudioKit in Frameworks */,
+				59BFEC1A2F2B5AF30034DB24 /* AudioKitEX in Frameworks */,
 				59E82AA12F1DE781003663D9 /* FirebaseAuth in Frameworks */,
+				59BFEC252F2B87880034DB24 /* SoundpipeAudioKit in Frameworks */,
 				59E82AA52F1DE781003663D9 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -175,6 +181,9 @@
 				59E82AA22F1DE781003663D9 /* FirebaseCore */,
 				59E82AA42F1DE781003663D9 /* FirebaseFirestore */,
 				59146C972F1EECEE009E21C2 /* GoogleSignIn */,
+				59BFEC162F2B59FB0034DB24 /* AudioKit */,
+				59BFEC192F2B5AF30034DB24 /* AudioKitEX */,
+				59BFEC242F2B87880034DB24 /* SoundpipeAudioKit */,
 			);
 			productName = TheVoice;
 			productReference = 59E82A412F1DAABD003663D9 /* TheVoice.app */;
@@ -262,6 +271,9 @@
 			packageReferences = (
 				59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				59146C962F1EECEE009E21C2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				59BFEC152F2B59FB0034DB24 /* XCRemoteSwiftPackageReference "AudioKit" */,
+				59BFEC182F2B5AF30034DB24 /* XCRemoteSwiftPackageReference "AudioKitEX" */,
+				59BFEC232F2B87880034DB24 /* XCRemoteSwiftPackageReference "SoundpipeAudioKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 59E82A422F1DAABD003663D9 /* Products */;
@@ -682,6 +694,30 @@
 				minimumVersion = 9.1.0;
 			};
 		};
+		59BFEC152F2B59FB0034DB24 /* XCRemoteSwiftPackageReference "AudioKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AudioKit/AudioKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.6.5;
+			};
+		};
+		59BFEC182F2B5AF30034DB24 /* XCRemoteSwiftPackageReference "AudioKitEX" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AudioKit/AudioKitEX.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.6.2;
+			};
+		};
+		59BFEC232F2B87880034DB24 /* XCRemoteSwiftPackageReference "SoundpipeAudioKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AudioKit/SoundpipeAudioKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.7.3;
+			};
+		};
 		59E82A9F2F1DE781003663D9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -697,6 +733,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 59146C962F1EECEE009E21C2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
+		};
+		59BFEC162F2B59FB0034DB24 /* AudioKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59BFEC152F2B59FB0034DB24 /* XCRemoteSwiftPackageReference "AudioKit" */;
+			productName = AudioKit;
+		};
+		59BFEC192F2B5AF30034DB24 /* AudioKitEX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59BFEC182F2B5AF30034DB24 /* XCRemoteSwiftPackageReference "AudioKitEX" */;
+			productName = AudioKitEX;
+		};
+		59BFEC242F2B87880034DB24 /* SoundpipeAudioKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59BFEC232F2B87880034DB24 /* XCRemoteSwiftPackageReference "SoundpipeAudioKit" */;
+			productName = SoundpipeAudioKit;
 		};
 		59E82AA02F1DE781003663D9 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
