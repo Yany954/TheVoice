@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		59146C982F1EECEE009E21C2 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 59146C972F1EECEE009E21C2 /* GoogleSignIn */; };
 		59146C9A2F1F2028009E21C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 59146C992F1F2028009E21C2 /* GoogleService-Info.plist */; };
+		596E2FC92F4EF8EF00BAADE5 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 596E2FC82F4EF8E700BAADE5 /* .gitignore */; };
 		59BFEC172F2B59FB0034DB24 /* AudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = 59BFEC162F2B59FB0034DB24 /* AudioKit */; };
 		59BFEC1A2F2B5AF30034DB24 /* AudioKitEX in Frameworks */ = {isa = PBXBuildFile; productRef = 59BFEC192F2B5AF30034DB24 /* AudioKitEX */; };
 		59BFEC252F2B87880034DB24 /* SoundpipeAudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = 59BFEC242F2B87880034DB24 /* SoundpipeAudioKit */; };
@@ -36,6 +37,7 @@
 
 /* Begin PBXFileReference section */
 		59146C992F1F2028009E21C2 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		596E2FC82F4EF8E700BAADE5 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		59E82A412F1DAABD003663D9 /* TheVoice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		59E82A522F1DAABF003663D9 /* TheVoiceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheVoiceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		59E82A5C2F1DAABF003663D9 /* TheVoiceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheVoiceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -51,6 +53,9 @@
 				Models/VoiceEffectManager.swift,
 				Views/Authentication/CustomTextField.swift,
 				Views/Premium/PremiumView.swift,
+				Views/Settings/AudioTipsView.swift,
+				Views/Settings/SettingsView.swift,
+				Views/Settings/TechLimitationsView.swift,
 			);
 			target = 59E82A512F1DAABF003663D9 /* TheVoiceTests */;
 		};
@@ -63,6 +68,9 @@
 				Models/VoiceEffectManager.swift,
 				Views/Authentication/CustomTextField.swift,
 				Views/Premium/PremiumView.swift,
+				Views/Settings/AudioTipsView.swift,
+				Views/Settings/SettingsView.swift,
+				Views/Settings/TechLimitationsView.swift,
 			);
 			target = 59E82A5B2F1DAABF003663D9 /* TheVoiceUITests */;
 		};
@@ -141,6 +149,7 @@
 		59E82A382F1DAABC003663D9 = {
 			isa = PBXGroup;
 			children = (
+				596E2FC82F4EF8E700BAADE5 /* .gitignore */,
 				59146C992F1F2028009E21C2 /* GoogleService-Info.plist */,
 				59E82A9C2F1DDEA3003663D9 /* Localization */,
 				59E82A432F1DAABD003663D9 /* TheVoice */,
@@ -297,6 +306,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				59146C9A2F1F2028009E21C2 /* GoogleService-Info.plist in Resources */,
+				596E2FC92F4EF8EF00BAADE5 /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

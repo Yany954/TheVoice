@@ -4,7 +4,7 @@ struct MainView: View {
     @EnvironmentObject var audioManager: AudioManager
     @EnvironmentObject var authManager: AuthManager
     @State private var showAlert = false
-    @State private var showProfile = false
+    @State private var showSettings = false
     @State private var showEffects = false
     
     var body: some View {
@@ -37,8 +37,8 @@ struct MainView: View {
                                 .frame(width: 44, height: 44)
                                 .background(
                                     audioManager.isTransmitting
-                                        ? Color.gray.opacity(0.3)
-                                        : Color.white.opacity(0.15)
+                                    ? Color.gray.opacity(0.3)
+                                    : Color.white.opacity(0.15)
                                 )
                                 .clipShape(Circle())
                         }
@@ -53,32 +53,18 @@ struct MainView: View {
                         Spacer()
                         
                         // Botón de perfil (reemplaza el menú)
+                        // En MainView.swift, dentro del Header (HStack)
                         Button(action: {
-                            showProfile = true
+                            showSettings = true // Cambia el nombre de la variable de estado
                         }) {
                             ZStack {
                                 Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.purple.opacity(0.6),
-                                                Color.blue.opacity(0.6)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
+                                    .fill(Color.white.opacity(0.15))
                                     .frame(width: 44, height: 44)
                                 
-                                if let firstLetter = authManager.user?.displayName?.first ?? authManager.user?.email?.first {
-                                    Text(String(firstLetter).uppercased())
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.white)
-                                } else {
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.white)
-                                }
+                                Image(systemName: "gearshape.fill") // Icono de engranaje
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
                             }
                         }
                     }
@@ -197,8 +183,8 @@ struct MainView: View {
                 }
             }
             .navigationBarBackButtonHidden(true)
-            .sheet(isPresented: $showProfile) {
-                ProfileView()
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
             .sheet(isPresented: $showEffects) {
                 VoiceEffectsView()

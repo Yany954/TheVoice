@@ -1,0 +1,15 @@
+# Derived Data y archivos de construcción
+build/
+DerivedData/
+*.moved-aside
+*.xcuserstate
+
+# Configuraciones de usuario de Xcode
+*.xcuserdata
+*.xcworkspace
+
+# Archivos de empaquetado
+.DS_Store
+Thumbs.db
+
+GoogleService-Info.plist
