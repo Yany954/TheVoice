@@ -21,18 +21,25 @@ final class AudioManager: ObservableObject {
     private var mixer: Mixer?
     private var engine: AudioEngine?
     
-    // AudioKit Effects (componentes disponibles en AudioKit 5.6.5)
+    // AudioKit Effects
     private var pitchShifter: PitchShifter?
     private var reverb: Reverb?
     private var distortion: Distortion?
     private var delay: Delay?
     private var peakingParametricEQ: PeakingParametricEqualizerFilter?
     private var dynamicsProcessor: DynamicsProcessor?
+    private var highPassFilter: HighPassFilter?
+    private var lowPassFilter: LowPassFilter?
     
-    // AVAudioSession para Bluetooth
+    // Feedback detection
+    private var feedbackDetectionTimer: Timer?
+    private var previousRMS: Float = 0.0
+    private let feedbackThreshold: Float = 0.15  // Umbral de RMS para detectar feedback
+    private let rmsIncreaseThreshold: Float = 2.5  // Si RMS aumenta 2.5x rápido = feedback
+    private var pitchTap: PitchTap?
+    
+    private var isStartingEngine = false
     private let audioSession = AVAudioSession.sharedInstance()
-    
-    // Tap para medidor
     private var levelTap: RawDataTap?
 
     // MARK: - Init
@@ -43,13 +50,37 @@ final class AudioManager: ObservableObject {
 
     deinit {
         stopMicrophone()
+        feedbackDetectionTimer?.invalidate()
         NotificationCenter.default.removeObserver(self)
+    }
+  
+
+    func installAutoTune(on input: Node, shifter: PitchShifter) {
+
+        pitchTap = PitchTap(input) { pitches, _ in
+            guard let freq = pitches.first, freq > 0 else { return }
+
+            let midi = 69 + 12 * log2(freq / 440.0)
+
+            // Redondear a nota más cercana (corrección)
+            let correctedMidi = round(midi)
+
+            let diff = correctedMidi - midi
+
+            DispatchQueue.main.async {
+                shifter.shift = diff
+            }
+        }
+
+        pitchTap?.start()
     }
 
     // MARK: - Public API
     func startMicrophone() {
         guard !isTransmitting else { return }
         guard !isInterrupted else { return }
+
+        isStartingEngine = true
 
         do {
             try configureSession()
@@ -58,9 +89,18 @@ final class AudioManager: ObservableObject {
             isTransmitting = true
             errorMessage = nil
             
+            // Iniciar monitoreo de feedback
+            startFeedbackDetection()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                self.isStartingEngine = false
+                self.checkBluetoothStatus()
+            }
+            
             print("🎤 Micrófono iniciado con efecto: \(currentEffect.rawValue)")
             
         } catch {
+            isStartingEngine = false
             errorMessage = error.localizedDescription
             stopMicrophone()
             print("❌ Error al iniciar: \(error)")
@@ -70,6 +110,11 @@ final class AudioManager: ObservableObject {
     func stopMicrophone() {
         engine?.stop()
         
+        // Detener monitoreo de feedback
+        feedbackDetectionTimer?.invalidate()
+        feedbackDetectionTimer = nil
+        previousRMS = 0.0
+        
         // Limpiar efectos
         pitchShifter = nil
         reverb = nil
@@ -77,6 +122,8 @@ final class AudioManager: ObservableObject {
         delay = nil
         peakingParametricEQ = nil
         dynamicsProcessor = nil
+        highPassFilter = nil
+        lowPassFilter = nil
         mixer = nil
         levelTap = nil
         
@@ -96,32 +143,40 @@ final class AudioManager: ObservableObject {
     }
 
     func checkBluetoothStatus() {
-        isBluetoothConnected = audioSession.currentRoute.outputs.contains {
-            $0.portType == .bluetoothA2DP ||
-            $0.portType == .bluetoothLE ||
-            $0.portType == .bluetoothHFP
-        }
+        let outputs = audioSession.currentRoute.outputs
+        let inputs = audioSession.currentRoute.inputs
+        
+        let btOutputTypes: [AVAudioSession.Port] = [.bluetoothA2DP, .bluetoothLE, .bluetoothHFP]
+        let btInputTypes: [AVAudioSession.Port] = [.bluetoothHFP]
+        
+        let hasBluetoothOutput = outputs.contains { btOutputTypes.contains($0.portType) }
+        let hasBluetoothInput  = inputs.contains  { btInputTypes.contains($0.portType) }
+        
+        isBluetoothConnected = hasBluetoothOutput || hasBluetoothInput
     }
 
     // MARK: - Audio Setup
     private func configureSession() throws {
+        // Configurar buffer muy bajo para reducir latencia y energía del loop
+        try audioSession.setPreferredIOBufferDuration(0.005)  // 5ms
+        
         try audioSession.setCategory(
             .playAndRecord,
-            mode: .voiceChat,
-            options: [.allowBluetooth, .defaultToSpeaker, .mixWithOthers]
+            mode: .default,
+            options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
         )
-        try audioSession.setActive(true)
+        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        
+        print("✅ Buffer duration configurado: \(audioSession.ioBufferDuration)")
     }
 
     private func startAudioKit() throws {
-        // Crear engine
         engine = AudioEngine()
         
         guard let engine = engine else {
             throw NSError(domain: "Audio", code: -1)
         }
         
-        // Obtener input del micrófono
         guard let input = engine.input else {
             throw NSError(domain: "Audio", code: -2, userInfo: [NSLocalizedDescriptionKey: "No hay micrófono disponible"])
         }
@@ -130,222 +185,238 @@ final class AudioManager: ObservableObject {
         
         print("🔧 Configurando AudioKit con efecto: \(currentEffect.rawValue)")
         
-        // Configurar cadena de efectos
         let output = setupAudioKitChain(input: input)
-        
-        // Conectar al output
         engine.output = output
-        
-        // Instalar tap para medidor
         installLevelTap(on: input)
         
-        // Iniciar engine
         try engine.start()
         
         print("✅ AudioKit iniciado correctamente")
+    }
+    
+    // MARK: - SISTEMA PROFESIONAL ANTI-FEEDBACK
+    
+    // 1️⃣ HIGH-PASS FILTER (elimina graves donde feedback ama vivir)
+    private func applyHighPassFilter(to node: Node) -> Node {
+        let hpf = HighPassFilter(node)
+        hpf.cutoffFrequency = 120  // Corta todo por debajo de 120Hz
+        hpf.resonance = 0.0        // Sin resonancia para evitar picos
+        highPassFilter = hpf
+        return hpf
+    }
+    
+    // 2️⃣ MULTI-NOTCH FILTERS (cubre frecuencias problemáticas comunes)
+    private func applyMultiNotchFilters(to node: Node) -> Node {
+        var currentNode = node
+        
+        // Notch 1: 250 Hz (graves-medios)
+        let eq1 = PeakingParametricEqualizerFilter(currentNode)
+        eq1.centerFrequency = 250
+        eq1.q = 3.5
+        eq1.gain = -18
+        currentNode = eq1
+        
+        // Notch 2: 500 Hz (medios)
+        let eq2 = PeakingParametricEqualizerFilter(currentNode)
+        eq2.centerFrequency = 500
+        eq2.q = 3.5
+        eq2.gain = -18
+        currentNode = eq2
+        
+        // Notch 3: 1000 Hz (medios-altos)
+        let eq3 = PeakingParametricEqualizerFilter(currentNode)
+        eq3.centerFrequency = 1000
+        eq3.q = 3.5
+        eq3.gain = -18
+        currentNode = eq3
+        
+        // Notch 4: 2000 Hz (presencia)
+        let eq4 = PeakingParametricEqualizerFilter(currentNode)
+        eq4.centerFrequency = 2000
+        eq4.q = 3.5
+        eq4.gain = -15  // Menos agresivo para no matar la voz
+        currentNode = eq4
+        
+        peakingParametricEQ = eq1  // Guardar referencia
+        return currentNode
+    }
+    
+    // 3️⃣ LIMITER AGRESIVO (evita runaway gain)
+    private func applyLimiter(to node: Node) -> Node {
+        let limiter = DynamicsProcessor(node)
+        limiter.threshold = -12       // Limita a -12dB
+        limiter.headRoom = 12         // Máxima reducción de 12dB
+        limiter.attackTime = 0.001    // Ataque ultra rápido (1ms)
+        limiter.releaseTime = 0.05    // Release rápido (50ms)
+        limiter.expansionRatio = 1.0  // Sin expansión
+        limiter.masterGain = 0        // Sin ganancia adicional
+        dynamicsProcessor = limiter
+        return limiter
+    }
+    
+    // 4️⃣ LOW-PASS FILTER suave (quita agudos extremos que pueden oscilar)
+    private func applyLowPassFilter(to node: Node) -> Node {
+        let lpf = LowPassFilter(node)
+        lpf.cutoffFrequency = 8000  // Corta por encima de 8kHz
+        lpf.resonance = 0.0
+        lowPassFilter = lpf
+        return lpf
+    }
+    
+    // 5️⃣ CADENA COMPLETA ANTI-FEEDBACK (aplicar a TODOS los efectos)
+    private func applyFeedbackSuppressionChain(to node: Node) -> Node {
+        var currentNode = node
+        
+        // Orden crítico:
+        currentNode = applyHighPassFilter(to: currentNode)      // 1. HPF primero
+        currentNode = applyMultiNotchFilters(to: currentNode)   // 2. Multi-notch
+        currentNode = applyLimiter(to: currentNode)             // 3. Limiter
+        currentNode = applyLowPassFilter(to: currentNode)       // 4. LPF último
+        
+        return currentNode
+    }
+    
+    // 6️⃣ DETECCIÓN AUTOMÁTICA DE FEEDBACK
+    private func startFeedbackDetection() {
+        feedbackDetectionTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            
+            let currentRMS = self.micLevel
+            
+            // Detectar aumento súbito de RMS (posible feedback)
+            if self.previousRMS > 0 {
+                let rmsRatio = currentRMS / self.previousRMS
+                
+                // Si RMS aumenta más de 2.5x en 50ms + está sobre umbral = FEEDBACK
+                if rmsRatio > self.rmsIncreaseThreshold && currentRMS > self.feedbackThreshold {
+                    self.handleFeedbackDetected()
+                }
+            }
+            
+            self.previousRMS = currentRMS
+        }
+    }
+    
+    private func handleFeedbackDetected() {
+        print("🚨 FEEDBACK DETECTADO - Reduciendo volumen automáticamente")
+        
+        // Reducir volumen del mixer inmediatamente
+        if let mixer = mixer {
+            let currentVolume = mixer.volume
+            let newVolume = currentVolume * 0.65  // Reducir 35%
+            
+            DispatchQueue.main.async {
+                mixer.volume = max(newVolume, 0.3)  // Mínimo 30%
+                
+                // Mensaje al usuario
+                //self.errorMessage = "Volumen reducido automáticamente (anti-acople)"
+                
+                // Limpiar mensaje después de 3 segundos
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    if self.errorMessage == "Volumen reducido automáticamente (anti-acople)" {
+                        self.errorMessage = nil
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - AudioKit Effect Chain
     private func setupAudioKitChain(input: Node) -> Node {
         var currentNode: Node = input
         
+        // CRÍTICO: Aplicar cadena anti-feedback PRIMERO, antes de cualquier efecto
+        currentNode = applyFeedbackSuppressionChain(to: currentNode)
+        
         switch currentEffect {
             
         case .none:
-            // Sin efectos
             mixer = Mixer(currentNode)
+            mixer!.volume = 0.75  // Volumen conservador
+            print("✅ Sin efecto + Anti-feedback PRO")
             return mixer!
             
         case .helium:
-            // Pitch shifter +12 semitonos (1 octava)
             let shifter = PitchShifter(currentNode, shift: 12)
             pitchShifter = shifter
             mixer = Mixer(shifter)
-            print("✅ PitchShifter: +12 semitonos (Helio)")
+            mixer!.volume = 0.70
+            print("✅ Helio + Anti-feedback PRO")
             return mixer!
             
         case .monster:
-            // EFECTO VECNA MEJORADO
-            // Pitch muy bajo (-12 semitonos)
             let shifter = PitchShifter(currentNode, shift: -12)
             
-            // EQ para atenuar agudos (usando PeakingParametricEqualizerFilter)
+            // EQ oscuro (después del anti-feedback)
             let eq = PeakingParametricEqualizerFilter(shifter)
-            eq.centerFrequency = 8000  // Frecuencias agudas
-            eq.q = 0.5  // Bandwidth inverso
-            eq.gain = -15  // Atenuar agudos
+            eq.centerFrequency = 8000
+            eq.q = 0.5
+            eq.gain = -15
             
-            // Reverb sutil para efecto de distancia
+            // Reverb MUY controlado
             let rev = Reverb(eq)
             rev.loadFactoryPreset(.mediumHall)
-            rev.dryWetMix = 0.35
+            rev.dryWetMix = 0.15  // Reducido aún más
             
-            // Mixer final con volumen reducido
             mixer = Mixer(rev)
-            mixer!.volume = 0.7
-            
-            pitchShifter = shifter
-            peakingParametricEQ = eq
-            reverb = rev
-            print("✅ Monster: Pitch -12 + EQ oscuro + Reverb distante")
-            return mixer!
-            
-        case .robot:
-            // EFECTO ROBOT SIMPLIFICADO (sin RingModulator)
-            // Pitch shifter moderado
-            let shifter = PitchShifter(currentNode, shift: -5)
-            shifter.crossfade = 256  // Más robótico
-            
-            // Delay muy corto para eco metálico
-            let del = Delay(shifter)
-            del.time = 0.005  // 5ms
-            del.feedback = 0.01
-            del.dryWetMix = 0.3
-            
-            // Distortion para carácter metálico
-            let dist = Distortion(del)
-            dist.delay = 0.05
-            dist.decay = 0.8
-            dist.delayMix = 0.5
-            
-            // EQ para enfatizar frecuencias metálicas
-            let eq = PeakingParametricEqualizerFilter(dist)
-            eq.centerFrequency = 2000  // Frecuencias metálicas
-            eq.q = 1.0
-            eq.gain = 8
-            
-            pitchShifter = shifter
-            delay = del
-            distortion = dist
-            peakingParametricEQ = eq
-            mixer = Mixer(eq)
-            print("✅ Robot: Pitch + Delay metálico + Distortion + EQ")
-            return mixer!
-            
-        case .autoTune:
-            let shifter = PitchShifter(currentNode, shift: 0)
-            shifter.crossfade = 4096  // Máxima suavidad
-            
-            let rev = Reverb(shifter)
-            rev.loadFactoryPreset(.smallRoom)
-            rev.dryWetMix = 0.08
+            mixer!.volume = 4
             
             pitchShifter = shifter
             reverb = rev
-            mixer = Mixer(rev)
-            return mixer!
             
+            print("✅ Monster + Anti-feedback PRO")
+            return mixer!
+
         case .echo:
-            // Delay simple
+            // Echo con feedback controlado
             let del = Delay(currentNode)
             del.time = 0.3
-            del.feedback = 50
-            del.dryWetMix = 0.4
+            del.feedback = 40  // Reducido de 50
+            del.dryWetMix = 0.35  // Reducido de 0.4
             delay = del
             mixer = Mixer(del)
-            print("✅ Echo configurado")
+            mixer!.volume = 0.70
+            print("✅ Echo + Anti-feedback PRO")
             return mixer!
             
         case .rhythmicDelay:
-            // Delay rítmico
             let del = Delay(currentNode)
             del.time = 0.5
-            del.feedback = 60
-            del.dryWetMix = 0.5
+            del.feedback = 50  // Reducido de 60
+            del.dryWetMix = 0.45  // Reducido de 0.5
             delay = del
             mixer = Mixer(del)
-            print("✅ Rhythmic Delay")
+            mixer!.volume = 0.70
+            print("✅ Rhythmic Delay + Anti-feedback PRO")
             return mixer!
             
         case .cathedral:
-            // Reverb catedral
+            // Cathedral con wet reducido
             let rev = Reverb(currentNode)
             rev.loadFactoryPreset(.cathedral)
-            rev.dryWetMix = 0.6
+            rev.dryWetMix = 0.50  // Reducido de 0.6
             reverb = rev
             mixer = Mixer(rev)
-            print("✅ Cathedral Reverb")
+            mixer!.volume = 0.65
+            print("✅ Cathedral + Anti-feedback PRO")
             return mixer!
             
         case .stadium:
-            // Reverb estadio
+            // Stadium con wet reducido
             let rev = Reverb(currentNode)
             rev.loadFactoryPreset(.largeHall)
-            rev.dryWetMix = 0.7
+            rev.dryWetMix = 0.60  // Reducido de 0.7
             reverb = rev
             mixer = Mixer(rev)
-            print("✅ Stadium Reverb")
+            mixer!.volume = 0.65
+            print("✅ Stadium + Anti-feedback PRO")
             return mixer!
             
-        case .studio:
-            // Solo EQ suave y Reverb muy sutil
-            let eq = PeakingParametricEqualizerFilter(currentNode)
-            eq.centerFrequency = 3000  // Presencia vocal
-            eq.q = 1.0
-            eq.gain = 2  // Ganancia suave
+        
             
-            // Reverb muy sutil
-            let rev = Reverb(eq)
-            rev.loadFactoryPreset(.mediumRoom)
-            rev.dryWetMix = 0.12  // Muy bajo para evitar cortes
-            
-            peakingParametricEQ = eq
-            reverb = rev
-            mixer = Mixer(rev)
-            print("✅ Studio: EQ suave + Reverb sutil")
-            return mixer!
-            
-        case .feedbackSupressor:
-            // Solo un EQ notch en frecuencia común de acople
-            let eq = PeakingParametricEqualizerFilter(currentNode)
-            eq.centerFrequency = 500  // Frecuencia típica de feedback
-            eq.q = 2.0  // Notch moderado
-            eq.gain = -12  // Reducción moderada
-            
-            // Volumen reducido
-            mixer = Mixer(eq)
-            mixer!.volume = 0.75  // No tan bajo como antes
-            
-            peakingParametricEQ = eq
-            print("✅ Feedback Suppressor: EQ notch simple")
-            return mixer!
-            
-        case .spy:
-            // EFECTO SPY/ANONYMOUS SIMPLIFICADO (sin RingModulator)
-            // Pitch muy bajo
-            let shifter = PitchShifter(currentNode, shift: -8)
-            shifter.crossfade = 256  // Más artificial
-            
-            // Distortion tipo radio
-            let dist = Distortion(shifter)
-            dist.delay = 0.05
-            dist.decay = 0.5
-            dist.delayMix = 0.5
-            
-            // EQ para oscurecer
-            let eq1 = PeakingParametricEqualizerFilter(dist)
-            eq1.centerFrequency = 6000
-            eq1.q = 0.7
-            eq1.gain = -10
-            
-            // EQ para agregar presencia metálica
-            let eq2 = PeakingParametricEqualizerFilter(eq1)
-            eq2.centerFrequency = 800
-            eq2.q = 1.5
-            eq2.gain = 6
-            
-            // Delay sutil
-            let del = Delay(eq2)
-            del.time = 0.08
-            del.feedback = 15
-            del.dryWetMix = 0.2
-            
-            pitchShifter = shifter
-            distortion = dist
-            peakingParametricEQ = eq1
-            delay = del
-            mixer = Mixer(del)
-            print("✅ Spy: Pitch bajo + Distortion + Multi-EQ + Delay")
+        default:
+            mixer = Mixer(currentNode)
+            mixer!.volume = 0.75
             return mixer!
         }
     }
@@ -354,11 +425,8 @@ final class AudioManager: ObservableObject {
     private func installLevelTap(on node: Node) {
         levelTap = RawDataTap(node) { [weak self] (samples: [Float]) in
             guard let self = self, !samples.isEmpty else { return }
-            
             var rms: Float = 0
-            
             vDSP_rmsqv(samples, 1, &rms, vDSP_Length(samples.count))
-            
             DispatchQueue.main.async {
                self.micLevel = min(max(rms * 25.0, 0), 1)
             }
@@ -374,21 +442,18 @@ final class AudioManager: ObservableObject {
             name: AVAudioSession.interruptionNotification,
             object: nil
         )
-
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(appDidEnterBackground),
             name: UIApplication.didEnterBackgroundNotification,
             object: nil
         )
-
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(appWillEnterForeground),
             name: UIApplication.willEnterForegroundNotification,
             object: nil
         )
-
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(routeChanged),
@@ -410,7 +475,6 @@ final class AudioManager: ObservableObject {
             stopMicrophone()
         } else if type == .ended {
             isInterrupted = false
-            
             if let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt {
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                 if options.contains(.shouldResume) {
@@ -428,7 +492,6 @@ final class AudioManager: ObservableObject {
 
     @objc private func appWillEnterForeground() {
         checkBluetoothStatus()
-        
         if isTransmitting {
             do {
                 try audioSession.setActive(true)
@@ -439,13 +502,19 @@ final class AudioManager: ObservableObject {
     }
 
     @objc private func routeChanged() {
-        let wasConnected = isBluetoothConnected
-        checkBluetoothStatus()
+        guard !isStartingEngine else {
+            print("⚠️ routeChanged ignorado durante inicio del engine")
+            return
+        }
         
-        if wasConnected && !isBluetoothConnected && isTransmitting {
-            DispatchQueue.main.async {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let wasConnected = self.isBluetoothConnected
+            self.checkBluetoothStatus()
+            
+            if wasConnected && !self.isBluetoothConnected && self.isTransmitting {
                 self.stopMicrophone()
                 self.errorMessage = "Bluetooth desconectado"
+                print("🔴 Bluetooth desconectado - deteniendo micrófono")
             }
         }
     }

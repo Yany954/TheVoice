@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0.1" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
+<plist version="1.0.1">
 <dict>
 	<key>CFBundleLocalizations</key>
 	<array>
@@ -14,12 +14,12 @@
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>GoogleSignIn</string>
-            <key>NSMicrophoneUsageDescription</key>
-            <string>Need microphone access for the app to work</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.824754632863-pqa4vp5u94v65rdrshmtp7q6m5b8dipg</string>
 			</array>
+			<key>NSMicrophoneUsageDescription</key>
+			<string>Need microphone access for the app to work</string>
 		</dict>
 	</array>
 	<key>UIBackgroundModes</key>

@@ -5,28 +5,22 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
     
     // GRATIS - Básicos
     case helium = "Helio"
-    case robot = "Robot"
     case echo = "Eco"
     
-    // PREMIUM - Calidad Profesional
-    case autoTune = "Auto-Tune"
-    case studio = "Voz de Estudio"
-    case feedbackSupressor = "Anti-Acople"
+    // PREMIUM - Transformación
+    case monster = "Monstruo"
     
     // PREMIUM - Profundidad y Ambiente
     case cathedral = "Catedral"
     case stadium = "Estadio"
     case rhythmicDelay = "Eco Rítmico"
     
-    // PREMIUM - Transformación Total
-    case monster = "Monstruo"
-    case spy = "Modo Espía"
     
     var id: String { self.rawValue }
     
     var isPremium: Bool {
         switch self {
-        case .none, .helium, .robot, .echo:
+        case .none, .helium, .echo:
             return false
         default:
             return true
@@ -37,14 +31,12 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
         switch self {
         case .none:
             return .basic
-        case .helium, .robot, .echo:
+        case .helium, .echo:
             return .basic
-        case .autoTune, .studio, .feedbackSupressor:
-            return .professional
+        case . monster:
+            return .transformation
         case .cathedral, .stadium, .rhythmicDelay:
             return .ambient
-        case .monster,.spy:
-            return .transformation
         }
     }
     
@@ -52,16 +44,11 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
         switch self {
         case .none: return "speaker.wave.2"
         case .helium: return "balloon"
-        case .robot: return "bolt.fill"
         case .echo: return "waveform"
-        case .autoTune: return "music.note"
-        case .studio: return "mic.fill"
-        case .feedbackSupressor: return "speaker.slash.fill"
         case .cathedral: return "building.columns"
         case .stadium: return "sportscourt"
         case .rhythmicDelay: return "metronome"
         case .monster: return "flame.fill"
-        case .spy: return "eye.slash"
         }
     }
     
@@ -71,16 +58,8 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
             return "Voz natural sin modificaciones"
         case .helium:
             return "Voz aguda y divertida como con helio"
-        case .robot:
-            return "Transformación robótica clásica"
         case .echo:
             return "Eco simple para ambiente"
-        case .autoTune:
-            return "Afinación automática profesional"
-        case .studio:
-            return "Calidad de grabación profesional con compresión y EQ"
-        case .feedbackSupressor:
-            return "Elimina el molesto pitido del feedback"
         case .cathedral:
             return "Reverberación amplia como en una catedral"
         case .stadium:
@@ -89,22 +68,18 @@ enum VoiceEffect: String, CaseIterable, Identifiable {
             return "Repeticiones controladas de tu voz"
         case .monster:
             return "Voz profunda y aterradora"
-        case .spy:
-            return "Voz distorsionada para agentes secretos"
         }
     }
 }
 
 enum EffectCategory: String, CaseIterable {
     case basic = "Básicos"
-    case professional = "Calidad Profesional"
-    case ambient = "Profundidad y Ambiente"
     case transformation = "Transformación Total"
+    case ambient = "Profundidad y Ambiente"
     
     var icon: String {
         switch self {
         case .basic: return "star"
-        case .professional: return "crown.fill"
         case .ambient: return "waveform.path.ecg"
         case .transformation: return "theatermasks.fill"
         }
